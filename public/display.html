@@ -1,321 +1,505 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>INNOVEX - 24 Hour Countdown</title>
-  <style>
-    /* Keep your full theme CSS (condensed here but kept visually identical) */
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1a0505 0%, #3d1010 25%, #5c1a1a 50%, #3d1010 75%, #1a0505 100%);
-      background-size: 400% 400%;
-      animation: gradientShift 15s ease infinite;
-      overflow: hidden;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-    .pattern-overlay { position:fixed; inset:0; pointer-events:none;
-      background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px),
-                        repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px);
-    }
-    .top-left { position:absolute; left:30px; top:20px; display:flex; gap:12px; align-items:center; z-index:5; }
-    .top-left img { width:72px; height:auto; display:block; filter: drop-shadow(0 6px 20px rgba(0,0,0,0.6)); border-radius:6px; }
-    .nss-badge { position:absolute; top:30px; right:30px; background: rgba(139,0,0,0.3); padding:20px 35px; border-radius:50px; border:2px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size:clamp(0.9rem,1.5vw,1.3rem); color:#fff; font-weight:700; letter-spacing:2px; box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:5; }
-    #videoContainer { position: fixed; inset:0; background:#000; display:flex; align-items:center; justify-content:center; z-index:1000; transition:opacity 0.6s ease; }
-    #videoContainer.hidden { opacity:0; pointer-events:none; }
-    #introVideo { max-width:100%; max-height:100%; display:block; }
-    .skip-button { position:absolute; bottom:50px; right:50px; padding:15px 35px; background: rgba(139,0,0,0.8); color:white; border:2px solid rgba(255,255,255,0.3); border-radius:50px; font-size:18px; cursor:pointer; transition:all .3s; font-weight:600; letter-spacing:1px; z-index:1101; }
-    .container { text-align:center; z-index:1; opacity:1; width: min(1200px, 96vw); padding: 20px; position: relative; }
-    .title { font-size: clamp(3rem,8vw,7rem); font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:15px; text-shadow: 0 0 20px rgba(255,0,0,0.8); margin-bottom:20px; }
-    .subtitle { font-size: clamp(1.5rem,3vw,2.5rem); color:#d4a574; font-weight:600; letter-spacing:8px; }
-    .clock-container { display:flex; gap: clamp(20px,4vw,60px); justify-content:center; align-items:center; margin:60px 0; flex-wrap:wrap; padding:0 20px; }
-    .time-box { background: linear-gradient(145deg, rgba(139,0,0,0.3), rgba(80,0,0,0.5)); border-radius:25px; padding: clamp(30px,5vw,60px) clamp(25px,4vw,50px); min-width: clamp(150px,15vw,220px); backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); position:relative; overflow:hidden; border:3px solid rgba(255,255,255,0.1); }
-    .time-value { font-size: clamp(4rem,10vw,8rem); font-weight:900; color:#fff; line-height:1; }
-    .time-label { font-size: clamp(1rem,2vw,1.8rem); color:#d4a574; letter-spacing:4px; margin-top:15px; font-weight:700; }
-    .separator { font-size: clamp(4rem,8vw,7rem); color: rgba(255,255,255,0.5); font-weight:900; animation: blink 1s ease-in-out infinite; text-shadow:0 0 20px rgba(255,0,0,0.5); }
-    @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0.3} }
-    .floating-particles { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
-    .particle { position:absolute; width:4px; height:4px; background: rgba(255,255,255,0.6); border-radius:50%; animation: float 20s infinite; }
-    @keyframes float { 0%,100%{ transform: translateY(100vh) translateX(0) rotate(0deg); opacity:0 } 10%{opacity:1} 90%{opacity:1} 100%{ transform: translateY(-100px) translateX(100px) rotate(360deg); opacity:0 } }
-    /* fallback play button */
-    #playFallback { display:none; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:1100; }
-    #playFallbackBtn { background:rgba(0,0,0,0.6); border:3px solid rgba(255,255,255,0.15); color:#fff; padding:28px 40px; font-size:28px; border-radius:12px; cursor:pointer; box-shadow:0 8px 40px rgba(0,0,0,0.6); font-weight:800; letter-spacing:1px; }
-    @media (max-width:768px) { #playFallbackBtn { padding:18px 26px; font-size:20px; } .top-left img { width:48px; } .nss-badge { top:15px; right:15px; padding:12px 20px; } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INNOVEX - 24 Hour Countdown</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a0505 0%, #3d1010 25%, #5c1a1a 50%, #3d1010 75%, #1a0505 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .pattern-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px);
+            pointer-events: none;
+        }
+
+        #videoContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        #videoContainer.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        #videoContainer.hiding {
+            opacity: 0;
+        }
+
+        #introVideo {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .container {
+            text-align: center;
+            z-index: 1;
+            opacity: 0;
+            animation: fadeIn 2s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .title {
+            font-size: clamp(3rem, 8vw, 7rem);
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 15px;
+            text-shadow: 
+                0 0 20px rgba(255, 0, 0, 0.8),
+                0 0 40px rgba(255, 0, 0, 0.6),
+                0 0 60px rgba(139, 0, 0, 0.4),
+                5px 5px 10px rgba(0, 0, 0, 0.8);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 
+                    0 0 20px rgba(255, 0, 0, 0.8),
+                    0 0 40px rgba(255, 0, 0, 0.6),
+                    0 0 60px rgba(139, 0, 0, 0.4),
+                    5px 5px 10px rgba(0, 0, 0, 0.8);
+            }
+            to {
+                text-shadow: 
+                    0 0 30px rgba(255, 0, 0, 1),
+                    0 0 60px rgba(255, 0, 0, 0.8),
+                    0 0 90px rgba(139, 0, 0, 0.6),
+                    5px 5px 10px rgba(0, 0, 0, 0.8);
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            color: #d4a574;
+            font-weight: 600;
+            letter-spacing: 8px;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+        }
+
+        .clock-container {
+            display: flex;
+            gap: clamp(20px, 4vw, 60px);
+            justify-content: center;
+            align-items: center;
+            margin: 60px 0;
+            flex-wrap: wrap;
+            padding: 0 20px;
+        }
+
+        .time-unit {
+            position: relative;
+        }
+
+        .time-box {
+            background: linear-gradient(145deg, rgba(139, 0, 0, 0.3), rgba(80, 0, 0, 0.5));
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: clamp(30px, 5vw, 60px) clamp(25px, 4vw, 50px);
+            min-width: clamp(150px, 15vw, 220px);
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 2px 10px rgba(255, 255, 255, 0.1),
+                0 0 60px rgba(139, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .time-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .time-box:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 
+                0 15px 50px rgba(0, 0, 0, 0.6),
+                inset 0 2px 15px rgba(255, 255, 255, 0.2),
+                0 0 80px rgba(255, 0, 0, 0.5);
+            border-color: rgba(255, 0, 0, 0.5);
+        }
+
+        .time-value {
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 
+                0 0 20px rgba(255, 0, 0, 0.8),
+                0 5px 15px rgba(0, 0, 0, 0.9);
+            line-height: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .time-label {
+            font-size: clamp(1rem, 2vw, 1.8rem);
+            color: #d4a574;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-top: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 1;
+        }
+
+        .separator {
+            font-size: clamp(4rem, 8vw, 7rem);
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 900;
+            animation: blink 1s ease-in-out infinite;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.3; }
+        }
+
+        .event-info {
+            margin-top: 60px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: clamp(1.2rem, 2.5vw, 2rem);
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .nss-badge {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(139, 0, 0, 0.3);
+            padding: 20px 35px;
+            border-radius: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            font-size: clamp(0.9rem, 1.5vw, 1.3rem);
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 2px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .logos-container {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .logo {
+            height: clamp(60px, 8vw, 100px);
+            width: auto;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: float 20s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .clock-container {
+                gap: 15px;
+            }
+            
+            .separator {
+                display: none;
+            }
+            
+            .nss-badge {
+                top: 15px;
+                right: 15px;
+                padding: 12px 20px;
+            }
+
+            .logos-container {
+                top: 15px;
+                left: 15px;
+                gap: 10px;
+            }
+
+            .logo {
+                height: clamp(40px, 6vw, 60px);
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="pattern-overlay"></div>
-  <div class="floating-particles" id="particles"></div>
-
-  <!-- logos -->
-  <div class="top-left">
-    <img src="images/logo_bg.png" alt="logo1" />
-    <img src="images/logo_black.png" alt="logo2" />
-  </div>
-
-  <div class="nss-badge">NSS IT WING • NMAMIT</div>
-
-  <!-- Video Container (overlay shown by default on load) -->
-  <div id="videoContainer" aria-hidden="false">
-    <video id="introVideo" playsinline>
-      <source src="media/teaser.mp4" type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
-
-    <!-- Fallback big play button (hidden by default) -->
-    <div id="playFallback">
-      <button id="playFallbackBtn" aria-label="Play teaser (sound on)">▶ Play Teaser (Sound On)</button>
+    <div class="pattern-overlay"></div>
+    <div class="floating-particles" id="particles"></div>
+    
+    <!-- Video Container -->
+    <div id="videoContainer">
+        <video id="introVideo" muted>
+            <source src="media/teaser.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
     </div>
 
-    <button class="skip-button" onclick="skipVideo()">Skip Video →</button>
-  </div>
+    <!-- Main Clock Container -->
+    <div class="container">
+        <!-- Logos on top-left -->
+        <div class="logos-container">
+            <img src="images/logo_bg.png" alt="Logo BG" class="logo" onerror="this.style.display='none'">
+            <img src="images/logo_black.png" alt="Logo Black" class="logo" onerror="this.style.display='none'">
+        </div>
 
-  <div class="container" aria-hidden="false">
-    <div class="header">
-      <h1 class="title">INNOVEX</h1>
-      <p class="subtitle">24-Hour Hackathon Countdown</p>
+        <!-- Badge on top-right -->
+        <div class="nss-badge">NSS IT WING • NMAMIT</div>
+        
+        <div class="header">
+            <h1 class="title">INNOVEX</h1>
+            <p class="subtitle">24-Hour Hackathon Countdown</p>
+        </div>
+
+        <div class="clock-container">
+            <div class="time-unit">
+                <div class="time-box">
+                    <div class="time-value" id="hours">24</div>
+                    <div class="time-label">Hours</div>
+                </div>
+            </div>
+            
+            <div class="separator">:</div>
+            
+            <div class="time-unit">
+                <div class="time-box">
+                    <div class="time-value" id="minutes">00</div>
+                    <div class="time-label">Minutes</div>
+                </div>
+            </div>
+            
+            <div class="separator">:</div>
+            
+            <div class="time-unit">
+                <div class="time-box">
+                    <div class="time-value" id="seconds">00</div>
+                    <div class="time-label">Seconds</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-info">
+            "Not Me But You" • November 21-22, 2025
+        </div>
     </div>
 
-    <div class="clock-container" aria-live="polite">
-      <div class="time-box">
-        <div class="time-value" id="hours">24</div>
-        <div class="time-label">Hours</div>
-      </div>
-      <div class="separator">:</div>
-      <div class="time-box">
-        <div class="time-value" id="minutes">00</div>
-        <div class="time-label">Minutes</div>
-      </div>
-      <div class="separator">:</div>
-      <div class="time-box">
-        <div class="time-value" id="seconds">00</div>
-        <div class="time-label">Seconds</div>
-      </div>
-    </div>
-
-    <div class="event-info" style="color:rgba(255,255,255,0.85); margin-top:20px;">"Not Me But You" • November 21-22, 2025</div>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    // particles
-    const particlesContainer = document.getElementById('particles');
-    for (let i = 0; i < 50; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      p.style.left = Math.random() * 100 + '%';
-      p.style.top = Math.random() * 100 + '%';
-      p.style.animationDelay = Math.random() * 20 + 's';
-      p.style.animationDuration = (Math.random() * 10 + 15) + 's';
-      particlesContainer.appendChild(p);
-    }
-
-    // DOM
-    const videoContainer = document.getElementById('videoContainer');
-    const introVideo = document.getElementById('introVideo');
-    const playFallback = document.getElementById('playFallback');
-    const playFallbackBtn = document.getElementById('playFallbackBtn');
-    const hoursEl = document.getElementById('hours');
-    const minutesEl = document.getElementById('minutes');
-    const secondsEl = document.getElementById('seconds');
-
-    // local state
-    let endTimestamp = null;
-    let pausedRemaining = null;
-    let running = false;
-    let countdownInterval = null;
-
-    function pad(n) { return String(n).padStart(2, '0'); }
-
-    function updateClockUI(msRemaining) {
-      if (msRemaining <= 0) {
-        hoursEl.textContent = '00';
-        minutesEl.textContent = '00';
-        secondsEl.textContent = '00';
-        return;
-      }
-      const hours = Math.floor(msRemaining / (1000*60*60));
-      const minutes = Math.floor((msRemaining % (1000*60*60)) / (1000*60));
-      const seconds = Math.floor((msRemaining % (1000*60)) / 1000);
-      hoursEl.textContent = pad(hours);
-      minutesEl.textContent = pad(minutes);
-      secondsEl.textContent = pad(seconds);
-    }
-
-    function startLocalCountdownWithEnd(endTs) {
-      endTimestamp = endTs;
-      running = true;
-      pausedRemaining = null;
-      clearInterval(countdownInterval);
-      updateClock();
-      countdownInterval = setInterval(updateClock, 1000);
-    }
-
-    function updateClock() {
-      if (!endTimestamp) return;
-      const now = Date.now();
-      let diff = endTimestamp - now;
-      if (diff < 0) diff = 0;
-      updateClockUI(diff);
-      if (diff === 0) { clearInterval(countdownInterval); running = false; }
-    }
-
-    function pauseLocalClockWithMs(ms) {
-      clearInterval(countdownInterval);
-      endTimestamp = null;
-      pausedRemaining = ms;
-      running = false;
-      updateClockUI(ms);
-    }
-
-    function stopLocalClock() {
-      clearInterval(countdownInterval);
-      endTimestamp = null;
-      pausedRemaining = null;
-      running = false;
-      updateClockUI(0);
-    }
-
-    // Show video overlay (display always shows overlay by default on load)
-    function showVideo() {
-      videoContainer.classList.remove('hidden');
-      videoContainer.style.opacity = 1;
-      introVideo.currentTime = 0;
-      playFallback.style.display = 'none';
-
-      // Attempt autoplay with sound -- may be blocked by browsers
-      const playPromise = introVideo.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          playFallback.style.display = 'none';
-        }).catch((err) => {
-          // autoplay blocked -> show fallback
-          console.warn('Autoplay blocked, showing fallback play button', err);
-          playFallback.style.display = 'flex';
-        });
-      } else {
-        setTimeout(()=> {
-          if (introVideo.paused) playFallback.style.display = 'flex';
-        }, 300);
-      }
-    }
-
-    function hideVideo() {
-      try { introVideo.pause(); } catch(e){}
-      introVideo.currentTime = 0;
-      videoContainer.classList.add('hidden');
-      videoContainer.style.opacity = 0;
-      playFallback.style.display = 'none';
-    }
-
-    // fallback click -> user gesture, play with sound
-    playFallbackBtn.addEventListener('click', () => {
-      playFallback.style.display = 'none';
-      introVideo.play().catch(err => console.error('Play failed after user gesture', err));
-    });
-
-    // Skip behavior
-    function skipVideo() {
-      try { introVideo.currentTime = introVideo.duration || introVideo.currentTime; introVideo.pause(); } catch(e){}
-      hideVideo();
-      if (socket && socket.connected) socket.emit('status', { type: 'videoEnded' });
-    }
-
-    // When video ends naturally, notify server
-    introVideo.addEventListener('ended', () => {
-      hideVideo();
-      if (socket && socket.connected) socket.emit('status', { type: 'videoEnded' });
-    });
-
-    // On video error, treat as ended
-    introVideo.addEventListener('error', (ev) => {
-      console.warn('Intro video error/missing', ev);
-      hideVideo();
-      if (socket && socket.connected) socket.emit('status', { type: 'videoEnded' });
-    });
-
-    // ===== Socket.IO client =====
-    const socket = io();
-
-    socket.on('connect', () => {
-      console.log('socket connected', socket.id);
-    });
-
-    // On initial state: if server running -> start clock; else SHOW the video overlay by default.
-    socket.on('state', (s) => {
-      console.log('state received', s);
-      if (!s) return;
-
-      if (s.running && s.endTimestamp) {
-        // authoritative start clock
-        startLocalCountdownWithEnd(s.endTimestamp);
-        hideVideo();
-      } else {
-        // if server indicates videoPlaying -> show video; otherwise show overlay by default so projector shows teaser UI
-        if (s.videoPlaying) showVideo();
-        else {
-          // show overlay UI by default (display will only trigger clock if server says startClock)
-          showVideo();
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Create floating particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+            particlesContainer.appendChild(particle);
         }
-        // if pausedRemaining present, show paused remaining BUT keep overlay visible (per requirement)
-        if (s.pausedRemaining != null) pauseLocalClockWithMs(s.pausedRemaining);
-      }
-    });
 
-    socket.on('control', (payload) => {
-      if (!payload || !payload.action) return;
-      const a = payload.action;
-      const d = payload.data || {};
-      console.log('control ->', a, d);
+        // Socket.IO connection
+        const socket = io();
 
-      switch (a) {
-        case 'playVideo':
-          showVideo();
-          break;
-        case 'stopVideo':
-          hideVideo();
-          break;
-        case 'skipVideo':
-          introVideo.currentTime = introVideo.duration || introVideo.currentTime;
-          introVideo.pause();
-          hideVideo();
-          socket.emit('status', { type: 'videoEnded' });
-          break;
-        case 'startClock':
-          // server will pass endTimestamp -> start countdown
-          if (d.endTimestamp) startLocalCountdownWithEnd(d.endTimestamp);
-          else if (d.ms) startLocalCountdownWithEnd(Date.now() + d.ms);
-          break;
-        case 'pauseClock':
-          if (d.pausedRemaining != null) pauseLocalClockWithMs(d.pausedRemaining);
-          else if (d.ms != null) pauseLocalClockWithMs(d.ms);
-          break;
-        case 'resumeClock':
-          if (d.endTimestamp) startLocalCountdownWithEnd(d.endTimestamp);
-          else if (d.ms) startLocalCountdownWithEnd(Date.now() + d.ms);
-          else socket.emit('requestState', {});
-          break;
-        case 'stopClock':
-          if (d.pausedRemaining != null) pauseLocalClockWithMs(d.pausedRemaining);
-          else if (d.ms != null) pauseLocalClockWithMs(d.ms);
-          else stopLocalClock();
-          break;
-        case 'syncClock':
-          if (d.endTimestamp) startLocalCountdownWithEnd(d.endTimestamp);
-          break;
-      }
-    });
+        // Video elements
+        const videoContainer = document.getElementById('videoContainer');
+        const introVideo = document.getElementById('introVideo');
 
-    // ensure overlay visible on initial load before socket replies
-    // (display should show teaser overlay by default - controller triggers actual clock start)
-    document.addEventListener('DOMContentLoaded', () => {
-      showVideo();
-    });
-  </script>
+        // Clock elements
+        const hoursEl = document.getElementById('hours');
+        const minutesEl = document.getElementById('minutes');
+        const secondsEl = document.getElementById('seconds');
+
+        let clockInterval = null;
+
+        // Handle video ended
+        introVideo.addEventListener('ended', function() {
+            console.log('Video ended');
+            socket.emit('video-ended');
+        });
+
+        // Handle video error
+        introVideo.addEventListener('error', function() {
+            console.log('Video error');
+            socket.emit('video-error');
+        });
+
+        // Handle state updates from server
+        socket.on('state-update', (state) => {
+            console.log('State update:', state);
+            
+            // Handle video
+            if (state.videoPlaying) {
+                showVideo();
+            } else {
+                hideVideo();
+            }
+            
+            // Handle clock
+            if (state.running && state.endTimestamp) {
+                startClockDisplay(state.endTimestamp);
+            } else if (!state.running && state.pausedRemaining !== null) {
+                updateClockDisplay(state.pausedRemaining);
+                stopClockDisplay();
+            } else if (!state.running && !state.endTimestamp && state.pausedRemaining === null) {
+                stopClockDisplay();
+            }
+        });
+
+        function showVideo() {
+            videoContainer.classList.remove('hiding');
+            videoContainer.classList.add('show');
+            introVideo.currentTime = 0;
+            introVideo.play().catch(err => {
+                console.error('Video play error:', err);
+                socket.emit('video-error');
+            });
+        }
+
+        function hideVideo() {
+            videoContainer.classList.add('hiding');
+            setTimeout(() => {
+                videoContainer.classList.remove('show', 'hiding');
+                introVideo.pause();
+                introVideo.currentTime = 0;
+            }, 500);
+        }
+
+        function startClockDisplay(endTimestamp) {
+            if (clockInterval) clearInterval(clockInterval);
+            
+            function update() {
+                const now = Date.now();
+                const distance = endTimestamp - now;
+                
+                if (distance < 0) {
+                    updateClockDisplay(0);
+                    stopClockDisplay();
+                    return;
+                }
+                
+                updateClockDisplay(distance);
+            }
+            
+            update();
+            clockInterval = setInterval(update, 100);
+        }
+
+        function stopClockDisplay() {
+            if (clockInterval) {
+                clearInterval(clockInterval);
+                clockInterval = null;
+            }
+        }
+
+        function updateClockDisplay(ms) {
+            if (ms < 0) ms = 0;
+            
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+            
+            hoursEl.textContent = String(hours).padStart(2, '0');
+            minutesEl.textContent = String(minutes).padStart(2, '0');
+            secondsEl.textContent = String(seconds).padStart(2, '0');
+        }
+
+        // Initialize with stopped clock
+        updateClockDisplay(24 * 60 * 60 * 1000);
+    </script>
 </body>
 </html>

@@ -1,131 +1,469 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>INNOVEX — Controller</title>
-  <style>
-    body{ font-family: 'Segoe UI', Tahoma, sans-serif; background:#070707; color:#fff; padding:20px; }
-    h1{ color:#ffb3b3; margin-bottom:8px; }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
-    button{ background:#8b0000; color:#fff; border:0; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:700; }
-    button.secondary{ background:#333; }
-    .disabled { opacity:0.45; pointer-events:none; }
-    input[type=number], input[type=text]{ padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; }
-    .card{ background:#0b0b0b; padding:12px; border-radius:10px; border:1px solid #222; margin-bottom:12px; }
-    pre { color:#ddd; white-space:pre-wrap; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INNOVEX Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            color: #ff4757;
+            text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #dfe6e9;
+            font-size: 1.1rem;
+        }
+
+        .status-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-box h2 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            color: #ffd700;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #b2bec3;
+        }
+
+        .status-value {
+            color: #74b9ff;
+            font-weight: 700;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .connection-status.connected {
+            background: #00b894;
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: #d63031;
+            color: white;
+        }
+
+        .controls-section {
+            margin-bottom: 30px;
+        }
+
+        .controls-section h3 {
+            margin-bottom: 15px;
+            color: #ffeaa7;
+            font-size: 1.3rem;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button:not(:disabled):hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #fdcb6e, #ffeaa7);
+            color: #2d3436;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #d63031, #ff7675);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #0984e3, #74b9ff);
+            color: white;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="number"] {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: #74b9ff;
+        }
+
+        .timestamp-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .timestamp-input:focus {
+            border-color: #74b9ff;
+            outline: none;
+        }
+    </style>
 </head>
 <body>
-  <h1>INNOVEX — Remote Controller</h1>
+    <div class="container">
+        <h1>🎮 INNOVEX CONTROLLER</h1>
+        <p class="subtitle">Remote Countdown Control System</p>
 
-  <div class="card">
-    <div style="font-weight:800; margin-bottom:6px;">Teaser + Clock</div>
-    <div class="row">
-      <button id="playTeaserStart" class="disabled">Play Teaser → Start Clock after end</button>
-      <input id="teaserMs" type="number" placeholder="ms for countdown (default 24h)" />
-      <button id="playVideo" class="secondary disabled">Play Video</button>
-      <button id="skipVideo" class="secondary disabled">Skip Video</button>
-      <button id="stopVideo" class="secondary disabled">Stop Video</button>
+        <!-- Connection Status -->
+        <div class="status-box">
+            <h2>📡 Connection Status</h2>
+            <div class="status-item">
+                <span class="status-label">WebSocket:</span>
+                <span class="connection-status disconnected" id="connectionStatus">Disconnected</span>
+            </div>
+        </div>
+
+        <!-- Server State -->
+        <div class="status-box">
+            <h2>🖥️ Server State</h2>
+            <div class="status-item">
+                <span class="status-label">Clock Running:</span>
+                <span class="status-value" id="stateRunning">false</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Video Playing:</span>
+                <span class="status-value" id="stateVideo">false</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Video Type:</span>
+                <span class="status-value" id="stateVideoType">none</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">End Timestamp:</span>
+                <span class="status-value" id="stateEndTime">null</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Paused Remaining:</span>
+                <span class="status-value" id="statePaused">null</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Pending Clock:</span>
+                <span class="status-value" id="statePending">null</span>
+            </div>
+        </div>
+
+        <!-- Video Controls -->
+        <div class="controls-section">
+            <h3>🎬 Video Controls</h3>
+            <div class="button-grid">
+                <button class="btn-primary" id="btnPlayTeaser" disabled>▶️ Play Teaser</button>
+                <button class="btn-info" id="btnPlayVideo" disabled>▶️ Play Video</button>
+                <button class="btn-warning" id="btnSkipVideo" disabled>⏭️ Skip Video</button>
+                <button class="btn-danger" id="btnStopVideo" disabled>⏹️ Stop Video</button>
+            </div>
+        </div>
+
+        <!-- Clock Controls -->
+        <div class="controls-section">
+            <h3>⏱️ Clock Controls</h3>
+            <div class="button-grid">
+                <button class="btn-success" id="btnStartClock" disabled>🚀 Start Clock (24h)</button>
+                <button class="btn-warning" id="btnPauseClock" disabled>⏸️ Pause Clock</button>
+                <button class="btn-info" id="btnResumeClock" disabled>▶️ Resume Clock</button>
+                <button class="btn-danger" id="btnStopClock" disabled>⏹️ Stop Clock</button>
+            </div>
+        </div>
+
+        <!-- Set Remaining Time -->
+        <div class="controls-section">
+            <h3>⏲️ Set Remaining Time</h3>
+            <div class="input-group">
+                <input type="number" id="inputMinutes" placeholder="Enter minutes" min="0" step="1" value="60">
+                <button class="btn-info" id="btnSetRemaining" disabled>Set Minutes</button>
+            </div>
+        </div>
+
+        <!-- Sync Timestamp -->
+        <div class="controls-section">
+            <h3>🔄 Sync with Exact Timestamp</h3>
+            <input type="datetime-local" class="timestamp-input" id="inputTimestamp">
+            <button class="btn-primary" id="btnSyncTimestamp" disabled style="width: 100%;">Sync Timestamp</button>
+        </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div style="font-weight:800; margin-bottom:6px;">Clock Controls</div>
-    <div class="row">
-      <button id="startClock" class="disabled">Start 24h Clock</button>
-      <button id="pauseClock" class="secondary disabled">Pause Clock</button>
-      <button id="resumeClock" class="secondary disabled">Resume Clock</button>
-      <button id="stopClock" class="secondary disabled">Stop Clock (freeze)</button>
-      <button id="resetClock" class="secondary disabled">Reset Timer (24h)</button>
-    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
 
-    <div style="margin-top:8px;">
-      <label>Set remaining (minutes):</label>
-      <div class="row">
-        <input id="remainingMinutes" type="number" placeholder="e.g. 10" />
-        <button id="setRemaining" class="secondary disabled">Set Remaining</button>
-        <input id="endTimestamp" type="number" placeholder="endTimestamp ms (Date.now()+...)" />
-        <button id="syncClock" class="secondary disabled">Sync Clock</button>
-      </div>
-    </div>
-  </div>
+        // UI Elements
+        const connectionStatus = document.getElementById('connectionStatus');
+        const stateRunning = document.getElementById('stateRunning');
+        const stateVideo = document.getElementById('stateVideo');
+        const stateVideoType = document.getElementById('stateVideoType');
+        const stateEndTime = document.getElementById('stateEndTime');
+        const statePaused = document.getElementById('statePaused');
+        const statePending = document.getElementById('statePending');
 
-  <div class="card">
-    <div style="font-weight:800; margin-bottom:6px;">Server State</div>
-    <div>Connection: <span id="conn">—</span></div>
-    <pre id="stateBox">waiting for server...</pre>
-  </div>
+        // Buttons
+        const btnPlayTeaser = document.getElementById('btnPlayTeaser');
+        const btnPlayVideo = document.getElementById('btnPlayVideo');
+        const btnSkipVideo = document.getElementById('btnSkipVideo');
+        const btnStopVideo = document.getElementById('btnStopVideo');
+        const btnStartClock = document.getElementById('btnStartClock');
+        const btnPauseClock = document.getElementById('btnPauseClock');
+        const btnResumeClock = document.getElementById('btnResumeClock');
+        const btnStopClock = document.getElementById('btnStopClock');
+        const btnSetRemaining = document.getElementById('btnSetRemaining');
+        const btnSyncTimestamp = document.getElementById('btnSyncTimestamp');
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+        const inputMinutes = document.getElementById('inputMinutes');
+        const inputTimestamp = document.getElementById('inputTimestamp');
 
-    const btn = id => document.getElementById(id);
-    const controls = ['playTeaserStart','playVideo','skipVideo','stopVideo','startClock','pauseClock','resumeClock','stopClock','setRemaining','syncClock','resetClock'];
-    function setButtonsEnabled(enabled){
-      controls.forEach(id => {
-        const el = btn(id);
-        if (!el) return;
-        if (enabled) el.classList.remove('disabled'); else el.classList.add('disabled');
-      });
-    }
-    setButtonsEnabled(false);
+        let isConnected = false;
 
-    const connEl = document.getElementById('conn');
-    const stateBox = document.getElementById('stateBox');
+        // Connection handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            isConnected = true;
+            updateConnectionStatus(true);
+            enableAllButtons();
+        });
 
-    function sendControl(action, data){ socket.emit('control', { action, data }); }
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            isConnected = false;
+            updateConnectionStatus(false);
+            disableAllButtons();
+        });
 
-    // handlers
-    btn('playTeaserStart').onclick = () => {
-      const ms = Number(document.getElementById('teaserMs').value) || (24*60*60*1000);
-      sendControl('playTeaserStartClockAfter', { ms });
-    };
-    btn('playVideo').onclick = () => sendControl('playVideo');
-    btn('skipVideo').onclick = () => sendControl('skipVideo');
-    btn('stopVideo').onclick = () => sendControl('stopVideo');
+        socket.on('state-update', (state) => {
+            console.log('State update:', state);
+            updateStateDisplay(state);
+        });
 
-    btn('startClock').onclick = () => sendControl('startClock', { ms: 24*60*60*1000 });
-    btn('pauseClock').onclick = () => sendControl('pauseClock');
-    btn('resumeClock').onclick = () => sendControl('resumeClock');
-    btn('stopClock').onclick = () => sendControl('stopClock');
-    btn('resetClock').onclick = () => {
-      if (!confirm('Reset timer to full 24 hours and start now?')) return;
-      sendControl('resetTo24h');
-    };
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'connection-status connected';
+            } else {
+                connectionStatus.textContent = 'Disconnected';
+                connectionStatus.className = 'connection-status disconnected';
+            }
+        }
 
-    btn('setRemaining').onclick = () => {
-      const mins = Number(document.getElementById('remainingMinutes').value);
-      if (isNaN(mins)) return alert('Enter minutes');
-      const ms = Math.max(0, mins*60*1000);
-      sendControl('setRemaining', { ms });
-    };
+        function updateStateDisplay(state) {
+            stateRunning.textContent = state.running ? 'true' : 'false';
+            stateVideo.textContent = state.videoPlaying ? 'true' : 'false';
+            stateVideoType.textContent = state.videoType || 'none';
+            
+            if (state.endTimestamp) {
+                const date = new Date(state.endTimestamp);
+                stateEndTime.textContent = date.toLocaleString();
+            } else {
+                stateEndTime.textContent = 'null';
+            }
+            
+            if (state.pausedRemaining !== null) {
+                const mins = Math.floor(state.pausedRemaining / 60000);
+                const secs = Math.floor((state.pausedRemaining % 60000) / 1000);
+                statePaused.textContent = mins + 'm ' + secs + 's';
+            } else {
+                statePaused.textContent = 'null';
+            }
+            
+            if (state.pendingClockMs !== null) {
+                const hours = Math.floor(state.pendingClockMs / 3600000);
+                statePending.textContent = hours + 'h';
+            } else {
+                statePending.textContent = 'null';
+            }
+        }
 
-    btn('syncClock').onclick = () => {
-      const val = Number(document.getElementById('endTimestamp').value);
-      if (isNaN(val) || !val) return alert('Enter valid unix ms');
-      sendControl('syncClock', { endTimestamp: val });
-    };
+        function enableAllButtons() {
+            btnPlayTeaser.disabled = false;
+            btnPlayVideo.disabled = false;
+            btnSkipVideo.disabled = false;
+            btnStopVideo.disabled = false;
+            btnStartClock.disabled = false;
+            btnPauseClock.disabled = false;
+            btnResumeClock.disabled = false;
+            btnStopClock.disabled = false;
+            btnSetRemaining.disabled = false;
+            btnSyncTimestamp.disabled = false;
+        }
 
-    // socket events
-    socket.on('connect', () => {
-      connEl.textContent = 'Connected (' + socket.id + ')';
-      setButtonsEnabled(true);
-    });
-    socket.on('disconnect', () => {
-      connEl.textContent = 'Disconnected';
-      setButtonsEnabled(false);
-    });
+        function disableAllButtons() {
+            btnPlayTeaser.disabled = true;
+            btnPlayVideo.disabled = true;
+            btnSkipVideo.disabled = true;
+            btnStopVideo.disabled = true;
+            btnStartClock.disabled = true;
+            btnPauseClock.disabled = true;
+            btnResumeClock.disabled = true;
+            btnStopClock.disabled = true;
+            btnSetRemaining.disabled = true;
+            btnSyncTimestamp.disabled = true;
+        }
 
-    socket.on('state', (s) => {
-      stateBox.textContent = JSON.stringify(s, null, 2);
-    });
+        // Button click handlers
+        btnPlayTeaser.addEventListener('click', () => {
+            console.log('Play Teaser clicked');
+            socket.emit('play-teaser');
+        });
 
-    socket.on('control', (payload) => {
-      // optional: log server control messages
-      console.log('control from server', payload);
-    });
-  </script>
+        btnPlayVideo.addEventListener('click', () => {
+            console.log('Play Video clicked');
+            socket.emit('play-video');
+        });
+
+        btnSkipVideo.addEventListener('click', () => {
+            console.log('Skip Video clicked');
+            socket.emit('skip-video');
+        });
+
+        btnStopVideo.addEventListener('click', () => {
+            console.log('Stop Video clicked');
+            socket.emit('stop-video');
+        });
+
+        btnStartClock.addEventListener('click', () => {
+            console.log('Start Clock clicked');
+            const ms = 24 * 60 * 60 * 1000; // 24 hours
+            socket.emit('start-clock', ms);
+        });
+
+        btnPauseClock.addEventListener('click', () => {
+            console.log('Pause Clock clicked');
+            socket.emit('pause-clock');
+        });
+
+        btnResumeClock.addEventListener('click', () => {
+            console.log('Resume Clock clicked');
+            socket.emit('resume-clock');
+        });
+
+        btnStopClock.addEventListener('click', () => {
+            console.log('Stop Clock clicked');
+            socket.emit('stop-clock');
+        });
+
+        btnSetRemaining.addEventListener('click', () => {
+            const minutes = parseInt(inputMinutes.value);
+            if (isNaN(minutes) || minutes < 0) {
+                alert('Please enter a valid number of minutes');
+                return;
+            }
+            console.log('Set Remaining clicked:', minutes);
+            socket.emit('set-remaining', minutes);
+        });
+
+        btnSyncTimestamp.addEventListener('click', () => {
+            const timestamp = new Date(inputTimestamp.value).getTime();
+            if (isNaN(timestamp)) {
+                alert('Please enter a valid date and time');
+                return;
+            }
+            console.log('Sync Timestamp clicked:', timestamp);
+            socket.emit('sync-timestamp', timestamp);
+        });
+
+        // Initialize datetime input to 24 hours from now
+        const now = new Date();
+        now.setHours(now.getHours() + 24);
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        inputTimestamp.value = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
+
+        // Initial state
+        disableAllButtons();
+    </script>
 </body>
 </html>

@@ -1,202 +1,215 @@
-// server.js
 const express = require('express');
 const http = require('http');
+const socketIo = require('socket.io');
 const path = require('path');
 const os = require('os');
-const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-// static files
-app.use(express.static(path.join(__dirname, 'public')));
+const PORT = 3000;
 
-// simple health check
-app.get('/status', (req, res) => res.json({ status: 'ok' }));
-
-/* ------------------------
-   In-memory server state
-   authoritative for countdown
--------------------------*/
-const state = {
-  endTimestamp: null,     // unix ms when countdown ends; null if not running
-  pausedRemaining: null,  // ms remaining when paused or stopped
-  running: false,         // boolean - clock ticking or not
-  pendingClockMs: null,   // ms to start once teaser ends (set by controller)
-  videoPlaying: false     // flag: server asked displays to play teaser
+// Server state
+let state = {
+  endTimestamp: null,
+  pausedRemaining: null,
+  running: false,
+  pendingClockMs: null,
+  videoPlaying: false,
+  videoType: null // 'teaser' or 'video'
 };
 
-function broadcastState() {
-  io.emit('state', {
-    endTimestamp: state.endTimestamp,
-    pausedRemaining: state.pausedRemaining,
-    running: state.running,
-    pendingClockMs: state.pendingClockMs,
-    videoPlaying: state.videoPlaying,
-    serverTime: Date.now()
-  });
-}
+// Serve static files
+app.use(express.static('public'));
 
-function startClockFromMs(ms) {
-  state.endTimestamp = Date.now() + ms;
-  state.pausedRemaining = null;
-  state.running = true;
-  state.pendingClockMs = null;
-  state.videoPlaying = false;
-  io.emit('control', { action: 'startClock', data: { endTimestamp: state.endTimestamp }});
-  broadcastState();
-}
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'display.html'));
+});
 
-/* ------------------------
-   Socket.IO handlers
--------------------------*/
+app.get('/display.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'display.html'));
+});
+
+app.get('/controller.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'controller.html'));
+});
+
+// Socket.IO connection
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-
-  // send current state immediately
-  socket.emit('state', {
-    endTimestamp: state.endTimestamp,
-    pausedRemaining: state.pausedRemaining,
-    running: state.running,
-    pendingClockMs: state.pendingClockMs,
-    videoPlaying: state.videoPlaying,
-    serverTime: Date.now()
+  
+  // Send current state to new client
+  socket.emit('state-update', state);
+  
+  // Play teaser
+  socket.on('play-teaser', () => {
+    console.log('Playing teaser video');
+    state.videoPlaying = true;
+    state.videoType = 'teaser';
+    state.pendingClockMs = 24 * 60 * 60 * 1000; // 24 hours
+    io.emit('state-update', state);
   });
-
-  socket.on('control', (payload) => {
-    if (!payload || !payload.action) return;
-    const action = payload.action;
-    const data = payload.data || {};
-    console.log('CONTROL:', action, data);
-
-    switch (action) {
-      case 'playTeaserStartClockAfter':
-        // controller triggers teaser across displays and requests that after video ends server starts clock with ms
-        state.pendingClockMs = (typeof data.ms === 'number') ? data.ms : (24*60*60*1000);
-        state.videoPlaying = true;
-        io.emit('control', { action: 'playVideo' });
-        broadcastState();
-        break;
-
-      case 'playVideo':
-        state.videoPlaying = true;
-        io.emit('control', { action: 'playVideo' });
-        broadcastState();
-        break;
-
-      case 'stopVideo':
-        state.videoPlaying = false;
-        io.emit('control', { action: 'stopVideo' });
-        broadcastState();
-        break;
-
-      case 'skipVideo':
-        // stops video and treat as ended -> start pending clock if set
-        state.videoPlaying = false;
-        io.emit('control', { action: 'skipVideo' });
-        if (state.pendingClockMs) startClockFromMs(state.pendingClockMs);
-        break;
-
-      case 'startClock':
-        // start immediately with ms or default 24h
-        startClockFromMs((typeof data.ms === 'number') ? data.ms : (24*60*60*1000));
-        break;
-
-      case 'pauseClock':
-      case 'stopClock':
-        // freeze the clock at current remaining time
-        if (state.running && state.endTimestamp) {
-          state.pausedRemaining = Math.max(0, state.endTimestamp - Date.now());
-          state.endTimestamp = null;
-          state.running = false;
-        }
-        io.emit('control', { action: 'pauseClock', data: { pausedRemaining: state.pausedRemaining }});
-        broadcastState();
-        break;
-
-      case 'resumeClock':
-        // resume from pausedRemaining
-        if (state.pausedRemaining != null) {
-          startClockFromMs(state.pausedRemaining);
-          state.pausedRemaining = null;
-        } else if (typeof data.endTimestamp === 'number') {
-          state.endTimestamp = data.endTimestamp;
-          state.running = true;
-          io.emit('control', { action: 'startClock', data: { endTimestamp: state.endTimestamp }});
-          broadcastState();
-        }
-        break;
-
-      case 'setRemaining':
-        // set remaining ms from now and start
-        if (typeof data.ms === 'number') {
-          startClockFromMs(data.ms);
-        }
-        break;
-
-      case 'syncClock':
-        // set absolute endTimestamp
-        if (typeof data.endTimestamp === 'number') {
-          state.endTimestamp = data.endTimestamp;
-          state.pausedRemaining = null;
-          state.running = true;
-          io.emit('control', { action: 'syncClock', data: { endTimestamp: state.endTimestamp }});
-          broadcastState();
-        }
-        break;
-
-      case 'resetTo24h':
-        // reset to full 24 hours and start immediately
-        startClockFromMs(24*60*60*1000);
-        break;
-
-      default:
-        console.log('Unknown control action:', action);
+  
+  // Play video
+  socket.on('play-video', () => {
+    console.log('Playing video');
+    state.videoPlaying = true;
+    state.videoType = 'video';
+    io.emit('state-update', state);
+  });
+  
+  // Skip video
+  socket.on('skip-video', () => {
+    console.log('Skipping video');
+    const wasTeaserWithPendingClock = state.videoType === 'teaser' && state.pendingClockMs;
+    state.videoPlaying = false;
+    state.videoType = null;
+    
+    // If teaser was skipped and clock was pending, start it
+    if (wasTeaserWithPendingClock) {
+      state.endTimestamp = Date.now() + state.pendingClockMs;
+      state.running = true;
+      state.pendingClockMs = null;
+      console.log('Auto-starting clock after teaser skip');
+    }
+    
+    io.emit('state-update', state);
+  });
+  
+  // Stop video
+  socket.on('stop-video', () => {
+    console.log('Stopping video');
+    state.videoPlaying = false;
+    state.videoType = null;
+    io.emit('state-update', state);
+  });
+  
+  // Video ended (from display client)
+  socket.on('video-ended', () => {
+    console.log('Video ended');
+    const wasTeaserWithPendingClock = state.videoType === 'teaser' && state.pendingClockMs;
+    state.videoPlaying = false;
+    state.videoType = null;
+    
+    // If teaser ended and clock was pending, start it
+    if (wasTeaserWithPendingClock) {
+      state.endTimestamp = Date.now() + state.pendingClockMs;
+      state.running = true;
+      state.pendingClockMs = null;
+      console.log('Auto-starting clock after teaser ended');
+    }
+    
+    io.emit('state-update', state);
+  });
+  
+  // Video error (from display client)
+  socket.on('video-error', () => {
+    console.log('Video error - treating as ended');
+    const wasTeaserWithPendingClock = state.videoType === 'teaser' && state.pendingClockMs;
+    state.videoPlaying = false;
+    state.videoType = null;
+    
+    // If teaser had error and clock was pending, start it
+    if (wasTeaserWithPendingClock) {
+      state.endTimestamp = Date.now() + state.pendingClockMs;
+      state.running = true;
+      state.pendingClockMs = null;
+      console.log('Auto-starting clock after teaser error');
+    }
+    
+    io.emit('state-update', state);
+  });
+  
+  // Start clock
+  socket.on('start-clock', (durationMs) => {
+    console.log('Starting clock:', durationMs, 'ms');
+    state.endTimestamp = Date.now() + durationMs;
+    state.pausedRemaining = null;
+    state.running = true;
+    state.pendingClockMs = null;
+    io.emit('state-update', state);
+  });
+  
+  // Pause clock
+  socket.on('pause-clock', () => {
+    if (state.running && state.endTimestamp) {
+      console.log('Pausing clock');
+      state.pausedRemaining = state.endTimestamp - Date.now();
+      state.running = false;
+      io.emit('state-update', state);
     }
   });
-
-  // displays report video ended (or error treated like ended)
-  socket.on('status', (payload) => {
-    if (!payload) return;
-    if (payload.type === 'videoEnded') {
-      state.videoPlaying = false;
-      if (state.pendingClockMs) {
-        startClockFromMs(state.pendingClockMs);
-        state.pendingClockMs = null;
-      }
-      broadcastState();
+  
+  // Resume clock
+  socket.on('resume-clock', () => {
+    if (!state.running && state.pausedRemaining !== null) {
+      console.log('Resuming clock');
+      state.endTimestamp = Date.now() + state.pausedRemaining;
+      state.pausedRemaining = null;
+      state.running = true;
+      io.emit('state-update', state);
     }
   });
-
+  
+  // Stop clock
+  socket.on('stop-clock', () => {
+    console.log('Stopping clock');
+    state.endTimestamp = null;
+    state.pausedRemaining = null;
+    state.running = false;
+    state.pendingClockMs = null;
+    io.emit('state-update', state);
+  });
+  
+  // Set remaining minutes
+  socket.on('set-remaining', (minutes) => {
+    console.log('Setting remaining time:', minutes, 'minutes');
+    const ms = minutes * 60 * 1000;
+    if (state.running) {
+      state.endTimestamp = Date.now() + ms;
+    } else {
+      state.pausedRemaining = ms;
+    }
+    io.emit('state-update', state);
+  });
+  
+  // Sync with exact timestamp
+  socket.on('sync-timestamp', (timestamp) => {
+    console.log('Syncing with timestamp:', new Date(timestamp));
+    state.endTimestamp = timestamp;
+    state.pausedRemaining = null;
+    state.running = true;
+    io.emit('state-update', state);
+  });
+  
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
 
-/* ------------------------
-   Helper: local IP
--------------------------*/
-function getLocalIP() {
-  const ifaces = os.networkInterfaces();
-  for (const name of Object.keys(ifaces)) {
-    for (const net of ifaces[name]) {
-      if (net.family === 'IPv4' && !net.internal) return net.address;
+// Get LAN IP
+function getLanIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
     }
   }
   return 'localhost';
 }
 
-/* ------------------------
-   Start server
--------------------------*/
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 server.listen(PORT, () => {
-  const ip = getLocalIP();
-  console.log('');
-  console.log('====================================');
-  console.log('    INNOVEX Server Running! 🚀');
-  console.log('====================================\n');
-  console.log('Public URL will be provided by your host (Railway).');
-  console.log(`Local test URLs (if running locally): http://localhost:${PORT}/display.html and http://localhost:${PORT}/controller.html`);
+  const lanIP = getLanIP();
+  console.log('\n' + '='.repeat(60));
+  console.log('🚀 INNOVEX Server Running');
+  console.log('='.repeat(60));
+  console.log('Display (local):     http://localhost:' + PORT + '/display.html');
+  console.log('Controller (local):  http://localhost:' + PORT + '/controller.html');
+  console.log('Display (LAN):       http://' + lanIP + ':' + PORT + '/display.html');
+  console.log('Controller (LAN):    http://' + lanIP + ':' + PORT + '/controller.html');
+  console.log('='.repeat(60) + '\n');
 });
