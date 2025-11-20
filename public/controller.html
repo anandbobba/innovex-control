@@ -1,4 +1,3 @@
-<!-- public/controller.html -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,7 +10,7 @@
     .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
     button{ background:#8b0000; color:#fff; border:0; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:700; }
     button.secondary{ background:#333; }
-    .disabled { opacity:0.5; pointer-events:none; }
+    .disabled { opacity:0.45; pointer-events:none; }
     input[type=number], input[type=text]{ padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; }
     .card{ background:#0b0b0b; padding:12px; border-radius:10px; border:1px solid #222; margin-bottom:12px; }
     pre { color:#ddd; white-space:pre-wrap; }
@@ -38,6 +37,7 @@
       <button id="pauseClock" class="secondary disabled">Pause Clock</button>
       <button id="resumeClock" class="secondary disabled">Resume Clock</button>
       <button id="stopClock" class="secondary disabled">Stop Clock (freeze)</button>
+      <button id="resetClock" class="secondary disabled">Reset Timer (24h)</button>
     </div>
 
     <div style="margin-top:8px;">
@@ -62,7 +62,7 @@
     const socket = io();
 
     const btn = id => document.getElementById(id);
-    const controls = ['playTeaserStart','playVideo','skipVideo','stopVideo','startClock','pauseClock','resumeClock','stopClock','setRemaining','syncClock'];
+    const controls = ['playTeaserStart','playVideo','skipVideo','stopVideo','startClock','pauseClock','resumeClock','stopClock','setRemaining','syncClock','resetClock'];
     function setButtonsEnabled(enabled){
       controls.forEach(id => {
         const el = btn(id);
@@ -90,6 +90,10 @@
     btn('pauseClock').onclick = () => sendControl('pauseClock');
     btn('resumeClock').onclick = () => sendControl('resumeClock');
     btn('stopClock').onclick = () => sendControl('stopClock');
+    btn('resetClock').onclick = () => {
+      if (!confirm('Reset timer to full 24 hours and start now?')) return;
+      sendControl('resetTo24h');
+    };
 
     btn('setRemaining').onclick = () => {
       const mins = Number(document.getElementById('remainingMinutes').value);
@@ -118,9 +122,9 @@
       stateBox.textContent = JSON.stringify(s, null, 2);
     });
 
-    // optional: show status messages from displays
-    socket.on('status', (p) => {
-      console.log('status from display', p);
+    socket.on('control', (payload) => {
+      // optional: log server control messages
+      console.log('control from server', payload);
     });
   </script>
 </body>
