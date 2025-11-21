@@ -77,6 +77,7 @@
 <body>
   <div class="pattern-overlay"></div>
   <div class="floating-particles" id="particles"></div>
+  <div class="celebration-overlay" id="celebrationOverlay"></div>
 
   <!-- PREMIUM START OVERLAY -->
   <div id="startOverlay" class="start-overlay">
@@ -213,6 +214,7 @@
     const introVideo = document.getElementById('introVideo');
     const videoWrap = document.getElementById('videoWrap');
     const enableSoundBtn = document.getElementById('enableSound');
+    const celebrationOverlay = document.getElementById('celebrationOverlay');
 
     const hoursEl = document.getElementById('hours');
     const minutesEl = document.getElementById('minutes');
@@ -221,6 +223,104 @@
     let clockInterval = null;
     let videoHasPlayed = false;
     let localStartDisabled = false;
+
+    // Load persisted state from localStorage
+    function loadPersistedState() {
+      try {
+        const saved = localStorage.getItem('innovex_state');
+        if (saved) {
+          const state = JSON.parse(saved);
+          console.log('DISPLAY: Loaded persisted state:', state);
+          
+          // If video was playing, mark it as played to skip it
+          if (state.videoPlaying) {
+            videoHasPlayed = true;
+            localStartDisabled = true;
+          }
+          
+          // If clock was running or paused, hide start overlay immediately
+          if (state.running || state.pausedRemaining != null || state.endTimestamp) {
+            console.log('DISPLAY: Clock state exists, hiding overlays');
+            hideStartOverlay();
+            hideOverlay();
+            localStartDisabled = true;
+            videoHasPlayed = true;
+          }
+          
+          // If clock was running, restore it
+          if (state.running && state.endTimestamp) {
+            const now = Date.now();
+            if (state.endTimestamp > now) {
+              console.log('DISPLAY: Restoring clock from localStorage');
+              startClockDisplay(state.endTimestamp);
+            } else {
+              console.log('DISPLAY: Persisted clock expired');
+              updateClockDisplay(0);
+            }
+          } else if (state.pausedRemaining != null) {
+            console.log('DISPLAY: Restoring paused state');
+            updateClockDisplay(state.pausedRemaining);
+          }
+          
+          return true; // State was restored
+        }
+      } catch (e) {
+        console.error('DISPLAY: Error loading persisted state:', e);
+      }
+      return false; // No state to restore
+    }
+
+    // Save state to localStorage
+    function persistState(state) {
+      try {
+        localStorage.setItem('innovex_state', JSON.stringify(state));
+      } catch (e) {
+        console.error('DISPLAY: Error persisting state:', e);
+      }
+    }
+
+    // Celebration effects
+    function createConfetti() {
+      celebrationOverlay.classList.add('active');
+      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#ffd93d', '#6bcf7f', '#b794f6', '#ff9ff3'];
+      
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+          const confetti = document.createElement('div');
+          confetti.className = 'confetti';
+          confetti.style.left = Math.random() * 100 + '%';
+          confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+          confetti.style.animationDelay = Math.random() * 0.5 + 's';
+          confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+          celebrationOverlay.appendChild(confetti);
+          
+          setTimeout(() => confetti.remove(), 5000);
+        }, i * 50);
+      }
+      
+      setTimeout(() => celebrationOverlay.classList.remove('active'), 5000);
+    }
+
+    function createSparkles() {
+      for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+          const sparkle = document.createElement('div');
+          sparkle.className = 'sparkle';
+          sparkle.style.left = Math.random() * 100 + '%';
+          sparkle.style.top = Math.random() * 100 + '%';
+          sparkle.style.animationDelay = Math.random() * 0.3 + 's';
+          celebrationOverlay.appendChild(sparkle);
+          
+          setTimeout(() => sparkle.remove(), 2000);
+        }, i * 30);
+      }
+    }
+
+    function celebrate() {
+      console.log('DISPLAY: Starting celebration effects!');
+      createConfetti();
+      createSparkles();
+    }
 
     // Helper functions
     function hideStartOverlay() {
@@ -313,8 +413,17 @@
     introVideo.addEventListener('ended', ()=> {
       console.log('DISPLAY: Video ended - emitting video-ended to server');
       videoHasPlayed = true;
+      
+      // Fade out video
+      videoWrap.classList.add('fade-out');
+      
+      setTimeout(() => {
+        videoWrap.style.display = 'none';
+        videoWrap.classList.remove('fade-out');
+        celebrate();
+      }, 800);
+      
       socket.emit('video-ended');
-      videoWrap.style.display = 'none';
     });
 
     introVideo.addEventListener('error', ()=> {
@@ -355,6 +464,9 @@
     socket.on('state-update', (st) => {
       console.log('DISPLAY: State update received:', st);
       
+      // Persist state to localStorage
+      persistState(st);
+      
       // Only block if video is CURRENTLY playing
       if (st.videoPlaying) {
         console.log('DISPLAY: Video playing, waiting for completion before starting clock');
@@ -373,6 +485,8 @@
         console.log('DISPLAY: Clock stopped/reset');
         stopClockDisplay();
         updateClockDisplay(24*60*60*1000);
+        // Clear persisted state when clock is reset
+        localStorage.removeItem('innovex_state');
       }
     });
 
@@ -416,6 +530,7 @@
     }
 
     // Initialize
+    loadPersistedState(); // Load saved state first
     updateClockDisplay(24*60*60*1000);
     console.log('DISPLAY: Initialized with 24:00:00');
   </script>
