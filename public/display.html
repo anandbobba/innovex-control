@@ -1,538 +1,675 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>INNOVEX Display</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{height:100%}
-    body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:linear-gradient(135deg,#1a0505 0%,#3d1010 25%,#5c1a1a 50%,#3d1010 75%,#1a0505 100%);background-size:400% 400%;animation:gradientShift 15s ease infinite;overflow:hidden;display:flex;align-items:center;justify-content:center}
-    @keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-    .pattern-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-image:repeating-linear-gradient(45deg,transparent,transparent 35px,rgba(255,255,255,.02) 35px,rgba(255,255,255,.02) 70px),repeating-linear-gradient(-45deg,transparent,transparent 35px,rgba(255,255,255,.02) 35px,rgba(255,255,255,.02) 70px);pointer-events:none}
-    .floating-particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
-    .particle{position:absolute;width:4px;height:4px;background:rgba(255,255,255,.6);border-radius:50%;animation:float 20s infinite}
-    @keyframes float{0%,100%{transform:translateY(100vh) translateX(0) rotate(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100px) translateX(100px) rotate(360deg);opacity:0}}
-    .container{text-align:center;z-index:1;color:#fff;pointer-events:none}
-    .header{margin-bottom:40px;pointer-events:auto}
-    .title{font-size:clamp(3rem,8vw,7rem);font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:15px;text-shadow:0 0 20px rgba(255,0,0,.8);margin-bottom:20px;animation:glow 2s ease-in-out infinite alternate}
-    @keyframes glow{from{text-shadow:0 0 20px rgba(255,0,0,.8)}to{text-shadow:0 0 30px rgba(255,0,0,1)}}
-    .subtitle{font-size:clamp(1.2rem,3vw,2rem);color:#d4a574;font-weight:600;letter-spacing:8px}
-    .clock-container{display:flex;gap:clamp(20px,4vw,60px);justify-content:center;align-items:center;margin:60px 0;flex-wrap:wrap;padding:0 20px}
-    .time-box{background:linear-gradient(145deg,rgba(139,0,0,.3),rgba(80,0,0,.5));border:3px solid rgba(255,255,255,.1);border-radius:25px;padding:clamp(30px,5vw,60px) clamp(25px,4vw,50px);min-width:clamp(150px,15vw,220px);backdrop-filter:blur(10px);box-shadow:0 8px 32px rgba(0,0,0,.4);position:relative;overflow:hidden}
-    .time-value{font-size:clamp(4rem,10vw,8rem);font-weight:900;color:#fff;text-shadow:0 0 20px rgba(255,0,0,.8)}
-    .time-label{font-size:clamp(1rem,2vw,1.8rem);color:#d4a574;text-transform:uppercase;letter-spacing:4px;margin-top:15px;font-weight:700}
-    .separator{font-size:clamp(4rem,10vw,8rem);font-weight:900;color:rgba(255,255,255,.6);text-shadow:0 0 20px rgba(255,0,0,.5)}
-    .nss-badge{position:absolute;top:20px;right:24px;background:rgba(139,0,0,.28);padding:14px 22px;border-radius:40px;border:2px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);font-size:clamp(.85rem,1.2vw,1.1rem);color:#fff;font-weight:700;letter-spacing:1.5px;box-shadow:0 8px 32px rgba(0,0,0,.4);pointer-events:none}
-    .logos-container{position:absolute;top:20px;left:20px;display:flex;gap:14px;align-items:center;pointer-events:none}
-    .logo{height:clamp(48px,6vw,86px);width:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))}
-    .event-info{color:rgba(255,255,255,.9);margin-top:40px;font-weight:600}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INNOVEX - 24 Hour Countdown</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    /* START OVERLAY STYLES */
-    .start-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 50%,#0a0a0a 100%);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity 1.2s cubic-bezier(0.4,0,0.2,1),visibility 0s linear 1.2s;opacity:1;visibility:visible}
-    .start-overlay.fade-out{opacity:0;visibility:hidden}
-    .start-overlay-content{text-align:center;max-width:90%}
-    .start-title{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:clamp(3.5rem,10vw,8rem);font-weight:900;letter-spacing:0.15em;text-transform:uppercase;background:linear-gradient(135deg,#d4af37 0%,#f4e5b8 25%,#d4af37 50%,#aa8b2e 75%,#d4af37 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1.2rem;animation:shimmer 4s ease-in-out infinite;text-shadow:0 0 40px rgba(212,175,55,.3);filter:drop-shadow(0 4px 12px rgba(212,175,55,.4))}
-    @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-    .start-subtitle{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:clamp(1.3rem,3vw,2.2rem);font-weight:600;letter-spacing:0.25em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:4rem;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-    .start-button{position:relative;display:inline-block;margin:0 auto;padding:0;border:none;background:transparent;cursor:pointer;outline:none;transform-style:preserve-3d;transition:transform .1s ease}
-    .start-button:active{transform:translateY(4px) scale(0.98)}
-    .button-inner{position:relative;padding:2.2rem 5rem;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:clamp(1.4rem,2.5vw,2rem);font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#1a1a1a;background:linear-gradient(135deg,#d4af37 0%,#f4e5b8 50%,#d4af37 100%);border-radius:100px;box-shadow:0 8px 0 #9d7d28,0 12px 20px rgba(0,0,0,.6),inset 0 2px 4px rgba(255,255,255,.5),inset 0 -2px 4px rgba(0,0,0,.2);transition:all .1s ease;overflow:hidden}
-    .start-button:active .button-inner{box-shadow:0 2px 0 #9d7d28,0 4px 10px rgba(0,0,0,.4),inset 0 4px 8px rgba(0,0,0,.4),inset 0 -1px 2px rgba(255,255,255,.2);transform:translateY(6px)}
-    .button-shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.4) 50%,transparent 100%);animation:shine 3s ease-in-out infinite}
-    @keyframes shine{0%,100%{left:-100%}50%{left:100%}}
-    .button-text{position:relative;z-index:1;display:block;text-shadow:0 1px 2px rgba(0,0,0,.3)}
-    .start-instruction{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:clamp(1rem,1.8vw,1.4rem);font-weight:400;color:rgba(255,255,255,.6);margin-top:3rem;letter-spacing:0.05em;line-height:1.6}
-    .start-button::before{content:'';position:absolute;top:50%;left:50%;width:140%;height:140%;background:radial-gradient(circle,rgba(212,175,55,.3) 0%,transparent 70%);transform:translate(-50%,-50%);opacity:0;animation:pulse 2s ease-in-out infinite;pointer-events:none;z-index:-1}
-    @keyframes pulse{0%,100%{opacity:.3;transform:translate(-50%,-50%) scale(1)}50%{opacity:.6;transform:translate(-50%,-50%) scale(1.1)}}
-    @media (max-width:768px){.button-inner{padding:1.8rem 4rem}.start-instruction{padding:0 2rem}}
-    @media (max-width:480px){.button-inner{padding:1.5rem 3rem}}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a0505 0%, #3d1010 25%, #5c1a1a 50%, #3d1010 75%, #1a0505 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    /* Secondary overlay (fallback) */
-    #overlay{position:fixed;inset:0;background:#000;z-index:2000;display:none;align-items:center;justify-content:center;transition:opacity .8s ease,visibility .2s}
-    #overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-    #overlayContent{text-align:center;color:#fff;pointer-events:auto}
-    #overlay h2{font-size:2.2rem;margin-bottom:18px;letter-spacing:6px}
-    #localFakeBtn{padding:20px 36px;border-radius:14px;background:linear-gradient(135deg,#ff6b6b,#ff4757);color:#fff;font-weight:900;font-size:1.2rem;border:none;cursor:pointer;box-shadow:0 12px 36px rgba(0,0,0,.6)}
-    @keyframes fake-jiggle{0%{transform:translateY(0)}20%{transform:translateY(-9px) rotate(-3deg)}40%{transform:translateY(9px) rotate(3deg)}60%{transform:translateY(-5px) rotate(-2deg)}80%{transform:translateY(4px) rotate(1deg)}100%{transform:translateY(0)}}
-    .jiggle{animation:fake-jiggle .8s cubic-bezier(.36,.07,.19,.97)}
-    .enable-sound{position:fixed;bottom:18px;right:18px;z-index:2200;background:rgba(255,255,255,.06);color:#fff;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);cursor:pointer;backdrop-filter:blur(6px);display:none}
-    .enable-sound.show{display:block}
-    .small-note{margin-top:12px;color:rgba(255,255,255,.72);font-size:.95rem}
-    #videoWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:1500;background:#000;transition:opacity .8s ease}
-    #videoWrap.fade-out{opacity:0}
-    #introVideo{width:100vw;height:100vh;object-fit:cover;display:block}
-    
-    /* CELEBRATION EFFECTS */
-    .celebration-overlay{position:fixed;inset:0;pointer-events:none;z-index:1400;display:none}
-    .celebration-overlay.active{display:block}
-    .confetti{position:absolute;width:10px;height:10px;background:#ff6b6b;opacity:0;animation:confetti-fall 3s ease-out forwards}
-    @keyframes confetti-fall{0%{opacity:1;transform:translateY(-100px) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
-    .sparkle{position:absolute;width:4px;height:4px;background:#ffd700;border-radius:50%;opacity:0;animation:sparkle-pulse 1.5s ease-out forwards}
-    @keyframes sparkle-pulse{0%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1.5)}100%{opacity:0;transform:scale(0)}}
-    .firework{position:absolute;width:6px;height:6px;border-radius:50%;opacity:0}
-    @keyframes firework-burst{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
-  </style>
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .pattern-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px);
+            pointer-events: none;
+        }
+
+        #videoContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #videoContainer.active {
+            display: flex;
+        }
+
+        #displayVideo {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .final-countdown {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: background 1s ease;
+        }
+
+        .final-countdown.active {
+            display: flex;
+            animation: coverScreen 10s ease forwards;
+        }
+
+        @keyframes coverScreen {
+            0% {
+                background: rgba(0, 0, 0, 0);
+            }
+            100% {
+                background: rgba(0, 0, 0, 0.98);
+            }
+        }
+
+        .final-seconds {
+            font-size: 10vw;
+            font-weight: 900;
+            color: #ff0000;
+            text-shadow: 
+                0 0 20px rgba(255, 0, 0, 0.7),
+                0 0 40px rgba(255, 0, 0, 0.5),
+                0 0 60px rgba(255, 0, 0, 0.3);
+            animation: pulse-final 1s ease-in-out infinite, grow 10s ease forwards;
+            opacity: 0;
+            transform: scale(1);
+        }
+
+        .final-seconds.show {
+            opacity: 1;
+        }
+
+        @keyframes pulse-final {
+            0%, 100% {
+                text-shadow: 
+                    0 0 20px rgba(255, 0, 0, 0.7),
+                    0 0 40px rgba(255, 0, 0, 0.5),
+                    0 0 60px rgba(255, 0, 0, 0.3);
+            }
+            50% {
+                text-shadow: 
+                    0 0 30px rgba(255, 0, 0, 0.8),
+                    0 0 60px rgba(255, 0, 0, 0.6),
+                    0 0 90px rgba(255, 0, 0, 0.4);
+            }
+        }
+
+        @keyframes grow {
+            0% {
+                font-size: 10vw;
+                transform: scale(1);
+            }
+            100% {
+                font-size: 35vw;
+                transform: scale(1.5);
+            }
+        }
+
+        .completion-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0505 0%, #3d1010 50%, #1a0505 100%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        .completion-message.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .completion-title {
+            font-size: clamp(3rem, 10vw, 8rem);
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 20px;
+            text-shadow: 
+                0 0 30px rgba(255, 0, 0, 1),
+                0 0 60px rgba(255, 0, 0, 0.8),
+                0 0 90px rgba(139, 0, 0, 0.6);
+            margin-bottom: 40px;
+            animation: fadeInUp 1.5s ease forwards;
+            opacity: 0;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .completion-subtitle {
+            font-size: clamp(2rem, 5vw, 4rem);
+            color: #d4a574;
+            font-weight: 600;
+            letter-spacing: 10px;
+            text-shadow: 2px 2px 20px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            padding: 0 20px;
+            animation: fadeInUp 1.5s ease forwards;
+            opacity: 0;
+            animation-delay: 1s;
+        }
+
+        .completion-message .particle {
+            animation: confetti 3s ease-out infinite;
+        }
+
+        @keyframes confetti {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            text-align: center;
+            z-index: 1;
+            opacity: 0;
+            animation: fadeIn 2s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .logos-container {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .logo-img {
+            height: 100px;
+            width: auto;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+            transition: transform 0.3s ease;
+        }
+
+        .logo-img:hover {
+            transform: scale(1.05);
+        }
+
+        .nss-badge {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(139, 0, 0, 0.3);
+            padding: 20px 35px;
+            border-radius: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            font-size: clamp(0.9rem, 1.5vw, 1.3rem);
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 2px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .title {
+            font-size: clamp(3rem, 8vw, 7rem);
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 15px;
+            text-shadow: 
+                0 0 20px rgba(255, 0, 0, 0.8),
+                0 0 40px rgba(255, 0, 0, 0.6),
+                0 0 60px rgba(139, 0, 0, 0.4),
+                5px 5px 10px rgba(0, 0, 0, 0.8);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 
+                    0 0 20px rgba(255, 0, 0, 0.8),
+                    0 0 40px rgba(255, 0, 0, 0.6),
+                    0 0 60px rgba(139, 0, 0, 0.4),
+                    5px 5px 10px rgba(0, 0, 0, 0.8);
+            }
+            to {
+                text-shadow: 
+                    0 0 30px rgba(255, 0, 0, 1),
+                    0 0 60px rgba(255, 0, 0, 0.8),
+                    0 0 90px rgba(139, 0, 0, 0.6),
+                    5px 5px 10px rgba(0, 0, 0, 0.8);
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            color: #d4a574;
+            font-weight: 600;
+            letter-spacing: 8px;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+        }
+
+        .clock-container {
+            display: flex;
+            gap: clamp(20px, 4vw, 60px);
+            justify-content: center;
+            align-items: center;
+            margin: 60px 0;
+            flex-wrap: wrap;
+            padding: 0 20px;
+        }
+
+        .time-unit {
+            position: relative;
+        }
+
+        .time-box {
+            background: linear-gradient(145deg, rgba(139, 0, 0, 0.3), rgba(80, 0, 0, 0.5));
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: clamp(30px, 5vw, 60px) clamp(25px, 4vw, 50px);
+            min-width: clamp(150px, 15vw, 220px);
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 2px 10px rgba(255, 255, 255, 0.1),
+                0 0 60px rgba(139, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .time-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .time-box:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 
+                0 15px 50px rgba(0, 0, 0, 0.6),
+                inset 0 2px 15px rgba(255, 255, 255, 0.2),
+                0 0 80px rgba(255, 0, 0, 0.5);
+            border-color: rgba(255, 0, 0, 0.5);
+        }
+
+        .time-value {
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 
+                0 0 20px rgba(255, 0, 0, 0.8),
+                0 5px 15px rgba(0, 0, 0, 0.9);
+            line-height: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .time-label {
+            font-size: clamp(1rem, 2vw, 1.8rem);
+            color: #d4a574;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-top: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 1;
+        }
+
+        .separator {
+            font-size: clamp(4rem, 8vw, 7rem);
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 900;
+            animation: blink 1s ease-in-out infinite;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.3; }
+        }
+
+        .event-info {
+            margin-top: 60px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: clamp(1.2rem, 2.5vw, 2rem);
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: float 20s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .clock-container {
+                gap: 15px;
+            }
+            
+            .separator {
+                display: none;
+            }
+            
+            .nss-badge, .logos-container {
+                top: 15px;
+            }
+            
+            .nss-badge {
+                right: 15px;
+                padding: 12px 20px;
+            }
+            
+            .logos-container {
+                left: 15px;
+            }
+            
+            .logo-img {
+                height: 60px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="pattern-overlay"></div>
-  <div class="floating-particles" id="particles"></div>
-  <div class="celebration-overlay" id="celebrationOverlay"></div>
-
-  <!-- PREMIUM START OVERLAY -->
-  <div id="startOverlay" class="start-overlay">
-    <div class="start-overlay-content">
-      <div class="start-title">INNOVEX 2025</div>
-      <div class="start-subtitle">24-Hour Hackathon</div>
-      
-      <button id="startButton" class="start-button">
-        <div class="button-inner">
-          <div class="button-shine"></div>
-          <span class="button-text">START</span>
-        </div>
-      </button>
-      
-      <div class="start-instruction">Press the button to begin the countdown experience</div>
-    </div>
-  </div>
-
-  <!-- Fallback overlay -->
-  <div id="overlay">
-    <div id="overlayContent">
-      <h2>WELCOME — NSS IT WING</h2>
-      <button id="localFakeBtn">🎛️ PRESS TO START</button>
-      <div class="small-note">You can press the button on this screen or press the START button from the controller.</div>
-    </div>
-  </div>
-
-  <div class="logos-container">
-    <img src="/images/logo_bg.png" alt="logo" class="logo" onerror="this.style.display='none'">
-    <img src="/images/logo_black.png" alt="logo" class="logo" onerror="this.style.display='none'">
-  </div>
-
-  <div class="nss-badge">NSS IT WING • NMAMIT</div>
-
-  <div id="videoWrap">
-    <video id="introVideo" preload="auto">
-      <source src="/media/teaser.mp4" type="video/mp4">
-      Your browser does not support video tag.
-    </video>
-  </div>
-
-  <div class="container">
-    <div class="header">
-      <h1 class="title">INNOVEX</h1>
-      <p class="subtitle">24-Hour Hackathon Countdown</p>
-    </div>
-
-    <div class="clock-container">
-      <div class="time-box">
-        <div class="time-value" id="hours">24</div>
-        <div class="time-label">Hours</div>
-      </div>
-      <div class="separator">:</div>
-      <div class="time-box">
-        <div class="time-value" id="minutes">00</div>
-        <div class="time-label">Minutes</div>
-      </div>
-      <div class="separator">:</div>
-      <div class="time-box">
-        <div class="time-value" id="seconds">00</div>
-        <div class="time-label">Seconds</div>
-      </div>
-    </div>
-
-    <div class="event-info">"Not Me But You" • November 21-22, 2025</div>
-  </div>
-
-  <button id="enableSound" class="enable-sound">🔊 Enable Sound</button>
-
-  <!-- START OVERLAY SCRIPT -->
-  <script>
-    (function() {
-      const overlay = document.getElementById('startOverlay');
-      const button = document.getElementById('startButton');
-      
-      if (!overlay || !button) {
-        console.error('Start overlay elements not found!');
-        return;
-      }
-
-      let isStarted = false;
-
-      button.addEventListener('click', function() {
-        if (isStarted) return;
-        isStarted = true;
-
-        button.disabled = true;
-        button.style.cursor = 'default';
-
-        overlay.classList.add('fade-out');
-
-        setTimeout(function() {
-          if (typeof startTeaser === 'function') {
-            startTeaser();
-          } else {
-            console.warn('startTeaser() not found yet, will be called when available');
-          }
-
-          setTimeout(function() {
-            if (overlay.parentNode) {
-              overlay.parentNode.removeChild(overlay);
-            }
-          }, 1200);
-        }, 200);
-      });
-
-      document.addEventListener('keydown', function(e) {
-        if ((e.key === 'Enter' || e.key === ' ') && !isStarted) {
-          e.preventDefault();
-          button.click();
-        }
-      });
-    })();
-  </script>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-
-    // Particles
-    const particles = document.getElementById('particles');
-    for (let i=0;i<50;i++){
-      const p = document.createElement('div'); p.className='particle';
-      p.style.left = Math.random()*100 + '%';
-      p.style.animationDelay = Math.random()*20 + 's';
-      p.style.animationDuration = (Math.random()*10 + 15) + 's';
-      particles.appendChild(p);
-    }
-
-    // Elements
-    const startOverlay = document.getElementById('startOverlay');
-    const overlay = document.getElementById('overlay');
-    const localFakeBtn = document.getElementById('localFakeBtn');
-    const introVideo = document.getElementById('introVideo');
-    const videoWrap = document.getElementById('videoWrap');
-    const enableSoundBtn = document.getElementById('enableSound');
-    const celebrationOverlay = document.getElementById('celebrationOverlay');
-
-    const hoursEl = document.getElementById('hours');
-    const minutesEl = document.getElementById('minutes');
-    const secondsEl = document.getElementById('seconds');
-
-    let clockInterval = null;
-    let videoHasPlayed = false;
-    let localStartDisabled = false;
-
-    // Load persisted state from localStorage
-    function loadPersistedState() {
-      try {
-        const saved = localStorage.getItem('innovex_state');
-        if (saved) {
-          const state = JSON.parse(saved);
-          console.log('DISPLAY: Loaded persisted state:', state);
-          
-          // If video was playing, mark it as played to skip it
-          if (state.videoPlaying) {
-            videoHasPlayed = true;
-            localStartDisabled = true;
-          }
-          
-          // If clock was running or paused, hide start overlay immediately
-          if (state.running || state.pausedRemaining != null || state.endTimestamp) {
-            console.log('DISPLAY: Clock state exists, hiding overlays');
-            hideStartOverlay();
-            hideOverlay();
-            localStartDisabled = true;
-            videoHasPlayed = true;
-          }
-          
-          // If clock was running, restore it
-          if (state.running && state.endTimestamp) {
-            const now = Date.now();
-            if (state.endTimestamp > now) {
-              console.log('DISPLAY: Restoring clock from localStorage');
-              startClockDisplay(state.endTimestamp);
-            } else {
-              console.log('DISPLAY: Persisted clock expired');
-              updateClockDisplay(0);
-            }
-          } else if (state.pausedRemaining != null) {
-            console.log('DISPLAY: Restoring paused state');
-            updateClockDisplay(state.pausedRemaining);
-          }
-          
-          return true; // State was restored
-        }
-      } catch (e) {
-        console.error('DISPLAY: Error loading persisted state:', e);
-      }
-      return false; // No state to restore
-    }
-
-    // Save state to localStorage
-    function persistState(state) {
-      try {
-        localStorage.setItem('innovex_state', JSON.stringify(state));
-      } catch (e) {
-        console.error('DISPLAY: Error persisting state:', e);
-      }
-    }
-
-    // Celebration effects
-    function createConfetti() {
-      celebrationOverlay.classList.add('active');
-      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#ffd93d', '#6bcf7f', '#b794f6', '#ff9ff3'];
-      
-      for (let i = 0; i < 50; i++) {
-        setTimeout(() => {
-          const confetti = document.createElement('div');
-          confetti.className = 'confetti';
-          confetti.style.left = Math.random() * 100 + '%';
-          confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-          confetti.style.animationDelay = Math.random() * 0.5 + 's';
-          confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
-          celebrationOverlay.appendChild(confetti);
-          
-          setTimeout(() => confetti.remove(), 5000);
-        }, i * 50);
-      }
-      
-      setTimeout(() => celebrationOverlay.classList.remove('active'), 5000);
-    }
-
-    function createSparkles() {
-      for (let i = 0; i < 30; i++) {
-        setTimeout(() => {
-          const sparkle = document.createElement('div');
-          sparkle.className = 'sparkle';
-          sparkle.style.left = Math.random() * 100 + '%';
-          sparkle.style.top = Math.random() * 100 + '%';
-          sparkle.style.animationDelay = Math.random() * 0.3 + 's';
-          celebrationOverlay.appendChild(sparkle);
-          
-          setTimeout(() => sparkle.remove(), 2000);
-        }, i * 30);
-      }
-    }
-
-    function celebrate() {
-      console.log('DISPLAY: Starting celebration effects!');
-      createConfetti();
-      createSparkles();
-    }
-
-    // Helper functions
-    function hideStartOverlay() {
-      if (startOverlay && !startOverlay.classList.contains('fade-out')) {
-        startOverlay.classList.add('fade-out');
-        setTimeout(()=> {
-          if (startOverlay.parentNode) startOverlay.parentNode.removeChild(startOverlay);
-        }, 1000);
-      }
-    }
-
-    function showOverlay() { 
-      overlay.style.display='flex'; 
-      overlay.classList.remove('hidden'); 
-    }
+    <div class="pattern-overlay"></div>
+    <div class="floating-particles" id="particles"></div>
     
-    function hideOverlay() { 
-      overlay.classList.add('hidden'); 
-      setTimeout(()=> overlay.style.display='none',900); 
-    }
+    <!-- Logos -->
+    <div class="logos-container">
+        <img src="images/logo_bg.png" alt="NSS Logo" class="logo-img">
+        <img src="images/logo_black.png" alt="NSS IT Wing" class="logo-img">
+    </div>
 
-    // Play video with unmuted attempt
-    function showVideoAndPlay(unmutedPreferred = true) {
-      console.log('DISPLAY: showVideoAndPlay called, unmutedPreferred:', unmutedPreferred);
-      videoWrap.style.display = 'flex';
-      introVideo.currentTime = 0;
-      
-      if (unmutedPreferred) introVideo.muted = false;
+    <div class="nss-badge">NSS IT WING • NMAMIT</div>
+    
+    <!-- Final Countdown Overlay (Last 10 seconds) -->
+    <div class="final-countdown" id="finalCountdown">
+        <div class="final-seconds" id="finalSeconds">10</div>
+    </div>
 
-      introVideo.play().then(()=>{
-        console.log('DISPLAY: Video playing successfully (unmuted)');
-        hideOverlay();
-        hideStartOverlay();
-        enableSoundBtn.classList.remove('show');
-      }).catch(err=>{
-        console.warn('DISPLAY: Unmuted play failed, trying muted:', err);
-        introVideo.muted = true;
-        introVideo.play().then(()=>{
-          console.log('DISPLAY: Video playing (muted fallback)');
-          hideOverlay();
-          hideStartOverlay();
-          enableSoundBtn.classList.add('show');
-        }).catch(err2=>{
-          console.error('DISPLAY: Both play attempts failed:', err2);
-          socket.emit('video-error');
-          hideOverlay();
-          hideStartOverlay();
-          videoHasPlayed = true;
+    <!-- Completion Message -->
+    <div class="completion-message" id="completionMessage">
+        <div class="completion-title">TIME'S UP!</div>
+        <div class="completion-subtitle">
+            Thank You For Participating in INNOVEX<br>
+            "Not Me But You"
+        </div>
+    </div>
+
+    <!-- Main Clock Container -->
+    <div class="container">
+        <div class="header">
+            <h1 class="title">INNOVEX</h1>
+            <p class="subtitle">24-Hour Hackathon Countdown</p>
+        </div>
+
+        <div class="clock-container">
+            <div class="time-unit">
+                <div class="time-box">
+                    <div class="time-value" id="hours">24</div>
+                    <div class="time-label">Hours</div>
+                </div>
+            </div>
+            
+            <div class="separator">:</div>
+            
+            <div class="time-unit">
+                <div class="time-box">
+                    <div class="time-value" id="minutes">00</div>
+                    <div class="time-label">Minutes</div>
+                </div>
+            </div>
+            
+            <div class="separator">:</div>
+            
+            <div class="time-unit">
+                <div class="time-box">
+                    <div class="time-value" id="seconds">00</div>
+                    <div class="time-label">Seconds</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-info">
+            "Not Me But You" • November 21-22, 2025
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Create floating particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        const socket = io();
+        const finalCountdown = document.getElementById('finalCountdown');
+        const finalSeconds = document.getElementById('finalSeconds');
+        const completionMessage = document.getElementById('completionMessage');
+        
+        let currentEndTimestamp = null;
+        let isRunning = false;
+        let updateInterval = null;
+        let inFinalCountdown = false;
+
+        // Socket connection
+        socket.on('connect', () => {
+            console.log('Connected to server');
         });
-      });
-    }
 
-    // Main start function
-    function startTeaser() {
-      if (localStartDisabled) {
-        console.log('DISPLAY: startTeaser already called, ignoring');
-        return;
-      }
-      localStartDisabled = true;
-      console.log('DISPLAY: startTeaser() called - emitting play-teaser');
+        socket.on('state', (state) => {
+            console.log('Received state:', state);
+            
+            // Handle clock
+            if (state.running && state.endTimestamp) {
+                currentEndTimestamp = state.endTimestamp;
+                isRunning = true;
+                if (!updateInterval) {
+                    startClockUpdate();
+                }
+            } else if (!state.running && state.pausedRemaining) {
+                isRunning = false;
+                updateClockDisplay(state.pausedRemaining);
+            } else if (!state.running) {
+                isRunning = false;
+                stopClockUpdate();
+                resetClock();
+                hideFinalCountdown();
+                hideCompletionMessage();
+            }
+        });
 
-      socket.emit('play-teaser', { ms: 24*60*60*1000 });
-      showVideoAndPlay(true);
-    }
-
-    // Fallback button
-    localFakeBtn.addEventListener('click', ()=> {
-      console.log('DISPLAY: Local fake button clicked');
-      localFakeBtn.classList.remove('jiggle'); 
-      void localFakeBtn.offsetWidth; 
-      localFakeBtn.classList.add('jiggle');
-      
-      setTimeout(() => {
-        startTeaser();
-      }, 100);
-    });
-
-    // Enable sound button
-    enableSoundBtn.addEventListener('click', ()=>{
-      try {
-        introVideo.muted = false;
-        introVideo.play().catch(()=>{});
-        enableSoundBtn.classList.remove('show');
-      } catch(e) { 
-        console.error('DISPLAY: Enable sound error:', e); 
-      }
-    });
-
-    // Video events
-    introVideo.addEventListener('ended', ()=> {
-      console.log('DISPLAY: Video ended - emitting video-ended to server');
-      videoHasPlayed = true;
-      
-      // Fade out video
-      videoWrap.classList.add('fade-out');
-      
-      setTimeout(() => {
-        videoWrap.style.display = 'none';
-        videoWrap.classList.remove('fade-out');
-        celebrate();
-      }, 800);
-      
-      socket.emit('video-ended');
-    });
-
-    introVideo.addEventListener('error', ()=> {
-      console.error('DISPLAY: Video error event');
-      videoHasPlayed = true;
-      socket.emit('video-error');
-      videoWrap.style.display = 'none';
-    });
-
-    // Socket events
-    socket.on('connect', ()=> {
-      console.log('DISPLAY: Connected to server');
-    });
-
-    socket.on('disconnect', ()=> {
-      console.log('DISPLAY: Disconnected from server');
-    });
-
-    // Handle fake-press from controller
-    socket.on('fake-press', ()=> {
-      console.log('DISPLAY: Received fake-press from server');
-      
-      localFakeBtn.classList.remove('jiggle'); 
-      void localFakeBtn.offsetWidth; 
-      localFakeBtn.classList.add('jiggle');
-      
-      setTimeout(()=> {
-        if (!localStartDisabled) {
-          startTeaser();
-        } else if (introVideo.paused) {
-          console.log('DISPLAY: Replaying video from fake-press');
-          showVideoAndPlay(false);
+        function hideFinalCountdown() {
+            finalCountdown.classList.remove('active');
+            finalSeconds.classList.remove('show');
+            inFinalCountdown = false;
         }
-      }, 450);
-    });
 
-    // State update handler
-    socket.on('state-update', (st) => {
-      console.log('DISPLAY: State update received:', st);
-      
-      // Persist state to localStorage
-      persistState(st);
-      
-      // Only block if video is CURRENTLY playing
-      if (st.videoPlaying) {
-        console.log('DISPLAY: Video playing, waiting for completion before starting clock');
-        return;
-      }
-      
-      // Handle clock state
-      if (st.running && st.endTimestamp) {
-        console.log('DISPLAY: Starting clock with endTimestamp:', new Date(st.endTimestamp));
-        startClockDisplay(st.endTimestamp);
-      } else if (!st.running && st.pausedRemaining != null) {
-        console.log('DISPLAY: Clock paused with remaining:', st.pausedRemaining);
-        updateClockDisplay(st.pausedRemaining);
-        stopClockDisplay();
-      } else if (!st.running && !st.pausedRemaining && !st.endTimestamp) {
-        console.log('DISPLAY: Clock stopped/reset');
-        stopClockDisplay();
-        updateClockDisplay(24*60*60*1000);
-        // Clear persisted state when clock is reset
-        localStorage.removeItem('innovex_state');
-      }
-    });
-
-    // Clock functions
-    function startClockDisplay(endTimestamp) {
-      if (clockInterval) clearInterval(clockInterval);
-      
-      function tick() {
-        const now = Date.now();
-        const distance = endTimestamp - now;
-        if (distance <= 0) {
-          updateClockDisplay(0);
-          stopClockDisplay();
-          console.log('DISPLAY: Countdown finished!');
-          return;
+        function hideCompletionMessage() {
+            completionMessage.classList.remove('active');
         }
-        updateClockDisplay(distance);
-      }
-      
-      tick();
-      clockInterval = setInterval(tick, 250);
-      console.log('DISPLAY: Clock interval started');
-    }
 
-    function stopClockDisplay() {
-      if (clockInterval) { 
-        clearInterval(clockInterval); 
-        clockInterval = null; 
-        console.log('DISPLAY: Clock interval stopped');
-      }
-    }
+        // Video events
+        displayVideo.addEventListener('ended', () => {
+            console.log('Video ended');
+            socket.emit('video-ended');
+        });
 
-    function updateClockDisplay(ms) {
-      if (ms < 0) ms = 0;
-      const h = Math.floor(ms / (1000*60*60));
-      const m = Math.floor((ms % (1000*60*60)) / (1000*60));
-      const s = Math.floor((ms % (1000*60)) / 1000);
-      hoursEl.textContent = String(h).padStart(2,'0');
-      minutesEl.textContent = String(m).padStart(2,'0');
-      secondsEl.textContent = String(s).padStart(2,'0');
-    }
+        displayVideo.addEventListener('error', () => {
+            console.log('Video error');
+            socket.emit('video-error');
+        });
 
-    // Initialize
-    loadPersistedState(); // Load saved state first
-    updateClockDisplay(24*60*60*1000);
-    console.log('DISPLAY: Initialized with 24:00:00');
-  </script>
+        function startClockUpdate() {
+            if (updateInterval) return;
+            updateInterval = setInterval(updateClock, 100);
+        }
+
+        function stopClockUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+        }
+
+        function updateClock() {
+            if (!isRunning || !currentEndTimestamp) return;
+            
+            const now = Date.now();
+            const distance = currentEndTimestamp - now;
+            
+            if (distance < 0) {
+                updateClockDisplay(0);
+                showCompletionScreen();
+                return;
+            }
+            
+            // Check if we're in the final 10 seconds
+            const totalSeconds = Math.floor(distance / 1000);
+            if (totalSeconds <= 10 && totalSeconds > 0 && !inFinalCountdown) {
+                startFinalCountdown();
+            }
+            
+            if (inFinalCountdown && totalSeconds <= 10 && totalSeconds > 0) {
+                finalSeconds.textContent = totalSeconds;
+            }
+            
+            updateClockDisplay(distance);
+        }
+
+        function startFinalCountdown() {
+            inFinalCountdown = true;
+            finalCountdown.classList.add('active');
+            setTimeout(() => {
+                finalSeconds.classList.add('show');
+            }, 100);
+        }
+
+        function showCompletionScreen() {
+            stopClockUpdate();
+            finalCountdown.classList.remove('active');
+            completionMessage.classList.add('active');
+        }
+
+        function updateClockDisplay(ms) {
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        }
+
+        function resetClock() {
+            document.getElementById('hours').textContent = '24';
+            document.getElementById('minutes').textContent = '00';
+            document.getElementById('seconds').textContent = '00';
+        }
+    </script>
 </body>
 </html>

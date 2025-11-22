@@ -1,284 +1,209 @@
-// server.js - FIXED VERSION
 const express = require('express');
 const http = require('http');
+const socketIo = require('socket.io');
 const path = require('path');
 const os = require('os');
-const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
+app.use(express.static('public'));
 
-// Global state
+// Server state
 let state = {
-  endTimestamp: null,
-  pausedRemaining: null,
-  running: false,
-  pendingClockMs: null,
-  videoPlaying: false,
-  videoType: null
+    endTimestamp: null,
+    pausedRemaining: null,
+    running: false,
+    pendingClockMs: null,
+    videoPlaying: false,
+    videoType: null // 'teaser' or 'video'
 };
 
-// Broadcast state to all connected clients
-function broadcastState() {
-  console.log('SERVER: Broadcasting state:', state);
-  io.emit('state-update', state);
-}
-
-// Start clock from milliseconds
-function startClockFromMs(ms) {
-  state.endTimestamp = Date.now() + ms;
-  state.pausedRemaining = null;
-  state.running = true;
-  state.pendingClockMs = null;
-  state.videoPlaying = false;
-  state.videoType = null;
-  console.log('SERVER: Clock started, endTimestamp:', new Date(state.endTimestamp));
-  broadcastState();
-}
-
-io.on('connection', (socket) => {
-  console.log('SERVER: Client connected:', socket.id);
-  
-  // Per-socket debounce tracking
-  socket._lastFakePress = 0;
-
-  // Send initial state to new client
-  socket.emit('state-update', state);
-
-  // FIXED: Fake press with acknowledgment
-  socket.on('fake-press', () => {
-    const now = Date.now();
-    
-    // Debounce: ignore presses within 800ms from same socket
-    if (now - (socket._lastFakePress || 0) < 800) {
-      console.log('SERVER: fake-press debounced from', socket.id);
-      return;
-    }
-    socket._lastFakePress = now;
-
-    console.log('SERVER: fake-press received from', socket.id);
-    
-    // Broadcast to all clients (including sender for consistency)
-    io.emit('fake-press');
-    
-    // FIXED: Send acknowledgment back to sender
-    socket.emit('fake-press-ack', { 
-      from: 'server', 
-      timestamp: now,
-      socketId: socket.id 
-    });
-    
-    console.log('SERVER: fake-press-ack sent to', socket.id);
-  });
-
-  // Play teaser video (sets pending clock)
-  socket.on('play-teaser', (data) => {
-    const ms = (data && typeof data.ms === 'number') ? data.ms : (24*60*60*1000);
-    state.pendingClockMs = ms;
-    state.videoPlaying = true;
-    state.videoType = 'teaser';
-    console.log('SERVER: play-teaser - pendingClockMs set to', ms, 'ms');
-    broadcastState();
-  });
-
-  // Play main video
-  socket.on('play-video', () => {
-    state.videoPlaying = true;
-    state.videoType = 'video';
-    console.log('SERVER: play-video');
-    broadcastState();
-  });
-
-  // Skip video
-  socket.on('skip-video', () => {
-    console.log('SERVER: skip-video');
-    const wasTeaser = (state.videoType === 'teaser' && state.pendingClockMs);
-    state.videoPlaying = false;
-    state.videoType = null;
-    
-    if (wasTeaser) {
-      console.log('SERVER: Teaser skipped, starting pending clock');
-      startClockFromMs(state.pendingClockMs);
-    } else {
-      broadcastState();
-    }
-  });
-
-  // Stop video
-  socket.on('stop-video', () => {
-    console.log('SERVER: stop-video');
-    state.videoPlaying = false;
-    state.videoType = null;
-    broadcastState();
-  });
-
-  // Start clock manually
-  socket.on('start-clock', (durationMs) => {
-    const ms = (typeof durationMs === 'number') ? durationMs : 24*60*60*1000;
-    console.log('SERVER: start-clock command, duration:', ms, 'ms');
-    
-    if (state.videoPlaying) {
-      console.log('SERVER: Video playing - queueing clock as pendingClockMs');
-      state.pendingClockMs = ms;
-      broadcastState();
-      return;
-    }
-    
-    startClockFromMs(ms);
-  });
-
-  // Pause clock
-  socket.on('pause-clock', () => {
-    console.log('SERVER: pause-clock');
-    if (state.running && state.endTimestamp) {
-      state.pausedRemaining = Math.max(0, state.endTimestamp - Date.now());
-      state.endTimestamp = null;
-      state.running = false;
-      console.log('SERVER: Clock paused, remaining:', state.pausedRemaining, 'ms');
-    }
-    broadcastState();
-  });
-
-  // Resume clock
-  socket.on('resume-clock', () => {
-    console.log('SERVER: resume-clock');
-    if (state.pausedRemaining != null) {
-      startClockFromMs(state.pausedRemaining);
-    } else {
-      console.log('SERVER: No paused time to resume');
-      broadcastState();
-    }
-  });
-
-  // Stop clock
-  socket.on('stop-clock', () => {
-    console.log('SERVER: stop-clock');
-    state.endTimestamp = null;
-    state.pausedRemaining = null;
-    state.running = false;
-    state.pendingClockMs = null;
-    broadcastState();
-  });
-
-  // Set remaining time
-  socket.on('set-remaining', (minutesOrMs) => {
-    let ms = null;
-    if (typeof minutesOrMs === 'number') {
-      // If large number, treat as milliseconds; otherwise as minutes
-      if (minutesOrMs > 100000) {
-        ms = minutesOrMs;
-      } else {
-        ms = Math.max(0, Math.floor(minutesOrMs) * 60 * 1000);
-      }
-    }
-    
-    if (ms === null) {
-      console.log('SERVER: set-remaining - invalid value');
-      return;
-    }
-    
-    console.log('SERVER: set-remaining to', ms, 'ms');
-    
-    if (state.running) {
-      state.endTimestamp = Date.now() + ms;
-    } else {
-      state.pausedRemaining = ms;
-    }
-    
-    broadcastState();
-  });
-
-  // Sync to exact timestamp
-  socket.on('sync-timestamp', (timestamp) => {
-    const ts = Number(timestamp);
-    if (!Number.isFinite(ts) || ts <= 0) {
-      console.log('SERVER: sync-timestamp - invalid timestamp');
-      return;
-    }
-    
-    console.log('SERVER: sync-timestamp to', new Date(ts));
-    
-    if (state.videoPlaying) {
-      console.log('SERVER: Video playing - setting pendingClockMs from timestamp');
-      state.pendingClockMs = Math.max(0, ts - Date.now());
-      broadcastState();
-      return;
-    }
-    
-    state.endTimestamp = ts;
-    state.pausedRemaining = null;
-    state.running = true;
-    broadcastState();
-  });
-
-  // FIXED: Video ended handler - start pending clock
-  socket.on('video-ended', () => {
-    console.log('SERVER: video-ended from', socket.id);
-    
-    state.videoPlaying = false;
-    state.videoType = null;
-    
-    if (state.pendingClockMs) {
-      console.log('SERVER: Starting clock from pendingClockMs:', state.pendingClockMs, 'ms');
-      startClockFromMs(state.pendingClockMs);
-    } else {
-      console.log('SERVER: No pending clock to start');
-      broadcastState();
-    }
-  });
-
-  // Video error handler
-  socket.on('video-error', () => {
-    console.log('SERVER: video-error from', socket.id);
-    
-    state.videoPlaying = false;
-    state.videoType = null;
-    
-    if (state.pendingClockMs) {
-      console.log('SERVER: Video error - starting pending clock anyway');
-      startClockFromMs(state.pendingClockMs);
-    } else {
-      broadcastState();
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('SERVER: Client disconnected:', socket.id);
-  });
+// Routes
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'display.html'));
 });
 
-// Get local network IP
-function getLocalIP() {
-  const ifaces = os.networkInterfaces();
-  for (const name of Object.keys(ifaces)) {
-    for (const net of ifaces[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
-      }
+app.get('/display.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'display.html'));
+});
+
+app.get('/controller.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'controller.html'));
+});
+
+// Socket.io connection
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+    
+    // Send current state to newly connected client
+    socket.emit('state', state);
+    
+    // Controller actions
+    socket.on('play-teaser', () => {
+        console.log('Playing teaser video');
+        state.videoPlaying = true;
+        state.videoType = 'teaser';
+        state.pendingClockMs = 24 * 60 * 60 * 1000; // Auto-start 24h after teaser
+        io.emit('state', state);
+    });
+    
+    socket.on('play-video', () => {
+        console.log('Playing video');
+        state.videoPlaying = true;
+        state.videoType = 'video';
+        io.emit('state', state);
+    });
+    
+    socket.on('skip-video', () => {
+        console.log('Skipping video');
+        if (state.videoType === 'teaser' && state.pendingClockMs) {
+            // Start clock immediately
+            state.endTimestamp = Date.now() + state.pendingClockMs;
+            state.running = true;
+            state.pendingClockMs = null;
+        }
+        state.videoPlaying = false;
+        state.videoType = null;
+        io.emit('state', state);
+    });
+    
+    socket.on('stop-video', () => {
+        console.log('Stopping video');
+        state.videoPlaying = false;
+        state.videoType = null;
+        io.emit('state', state);
+    });
+    
+    socket.on('video-ended', () => {
+        console.log('Video ended on client');
+        if (state.videoType === 'teaser' && state.pendingClockMs) {
+            // Auto-start clock after teaser
+            state.endTimestamp = Date.now() + state.pendingClockMs;
+            state.running = true;
+            state.pendingClockMs = null;
+            console.log('Auto-starting 24h clock after teaser');
+        }
+        state.videoPlaying = false;
+        state.videoType = null;
+        io.emit('state', state);
+    });
+    
+    socket.on('video-error', () => {
+        console.log('Video error on client');
+        if (state.videoType === 'teaser' && state.pendingClockMs) {
+            // Auto-start clock if teaser fails
+            state.endTimestamp = Date.now() + state.pendingClockMs;
+            state.running = true;
+            state.pendingClockMs = null;
+            console.log('Auto-starting 24h clock (video error)');
+        }
+        state.videoPlaying = false;
+        state.videoType = null;
+        io.emit('state', state);
+    });
+    
+    socket.on('start-clock', (data) => {
+        const hours = data.hours || 24;
+        const ms = hours * 60 * 60 * 1000;
+        state.endTimestamp = Date.now() + ms;
+        state.running = true;
+        state.pausedRemaining = null;
+        console.log(`Starting ${hours}h clock`);
+        io.emit('state', state);
+    });
+    
+    socket.on('pause-clock', () => {
+        if (state.running && state.endTimestamp) {
+            state.pausedRemaining = state.endTimestamp - Date.now();
+            state.running = false;
+            console.log('Clock paused');
+            io.emit('state', state);
+        }
+    });
+    
+    socket.on('resume-clock', () => {
+        if (!state.running && state.pausedRemaining) {
+            state.endTimestamp = Date.now() + state.pausedRemaining;
+            state.running = true;
+            state.pausedRemaining = null;
+            console.log('Clock resumed');
+            io.emit('state', state);
+        }
+    });
+    
+    socket.on('stop-clock', () => {
+        state.endTimestamp = null;
+        state.pausedRemaining = null;
+        state.running = false;
+        console.log('Clock stopped');
+        io.emit('state', state);
+    });
+    
+    socket.on('set-minutes', (data) => {
+        const minutes = data.minutes || 0;
+        const ms = minutes * 60 * 1000;
+        state.endTimestamp = Date.now() + ms;
+        state.running = true;
+        state.pausedRemaining = null;
+        console.log(`Setting clock to ${minutes} minutes`);
+        io.emit('state', state);
+    });
+    
+    socket.on('set-custom-time', (data) => {
+        const ms = data.ms || 0;
+        if (ms > 0) {
+            state.endTimestamp = Date.now() + ms;
+            state.running = true;
+            state.pausedRemaining = null;
+            const hours = Math.floor(ms / 3600000);
+            const mins = Math.floor((ms % 3600000) / 60000);
+            const secs = Math.floor((ms % 60000) / 1000);
+            console.log(`Setting custom time: ${hours}h ${mins}m ${secs}s`);
+            io.emit('state', state);
+        }
+    });
+    
+    socket.on('sync-timestamp', (data) => {
+        state.endTimestamp = data.timestamp;
+        state.running = true;
+        state.pausedRemaining = null;
+        console.log('Syncing with timestamp:', new Date(data.timestamp));
+        io.emit('state', state);
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+// Get LAN IP
+function getLanIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
     }
-  }
-  return 'localhost';
+    return 'localhost';
 }
 
-// Start server
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  const ip = getLocalIP();
-  console.log('\n====================================');
-  console.log('    INNOVEX Server Running! 🚀');
-  console.log('====================================\n');
-  console.log(`Bound to port: ${PORT}`);
-  console.log(`\nLocal URLs:`);
-  console.log(`  Display:    http://localhost:${PORT}/display.html`);
-  console.log(`  Controller: http://localhost:${PORT}/controller.html`);
-  console.log(`\nLAN URLs:`);
-  console.log(`  Display:    http://${ip}:${PORT}/display.html`);
-  console.log(`  Controller: http://${ip}:${PORT}/controller.html`);
-  console.log('\nPublic URL will be provided by Railway.');
-  console.log('(Generate Domain in Railway settings)\n');
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    const lanIP = getLanIP();
+    console.log('\n' + '='.repeat(60));
+    console.log('🎯 INNOVEX Control Server Running');
+    console.log('='.repeat(60));
+    console.log('\n📺 DISPLAY PAGE (For Big Screen):');
+    console.log(`   Local:  http://localhost:${PORT}/display.html`);
+    console.log(`   LAN:    http://${lanIP}:${PORT}/display.html`);
+    console.log('\n🎮 CONTROLLER PAGE (For Organizers):');
+    console.log(`   Local:  http://localhost:${PORT}/controller.html`);
+    console.log(`   LAN:    http://${lanIP}:${PORT}/controller.html`);
+    console.log('\n' + '='.repeat(60) + '\n');
 });
